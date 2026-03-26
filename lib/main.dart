@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:student_housing_finder/screens/splash/splash_screen.dart';
 
 import 'core/theme/dark_theme.dart';
 import 'core/theme/light_theme.dart';
-import 'screens/owner/owner_dashboard_screen.dart';
+import 'providers/property_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Prefer dark status bar icons on the dark background.
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => PropertyProvider()..loadProperties(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -27,8 +37,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: appLightTheme,
       darkTheme: appDarkTheme,
-      themeMode: ThemeMode.dark,
-      home: const OwnerDashboardScreen(),
+      themeMode: ThemeMode.system, 
+      home: const SplashScreen(),
     );
   }
 }
