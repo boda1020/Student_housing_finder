@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../data/services/auth_service.dart';
+import 'login_screen.dart';
+import '../owner/owner_dashboard_screen.dart';
 
 const _bgColor = Color(0xFF0D1117);
 const _cardColor = Color(0xFF161B22);
@@ -15,6 +18,56 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   int _role = 0; // 0 = Student, 1 = Property Owner
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _universityController = TextEditingController();
+  bool _isLoading = false;
+
+  final _authService = AuthService();
+
+  Future<void> _handleSignUp() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final role = _role == 0 ? 'student' : 'owner';
+      await _authService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        fullName: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        university: role == 'student' ? _universityController.text.trim() : null,
+        role: role,
+      );
+
+      if (mounted) {
+        // بعد الساين أب، نبلغ المستخدم بالنجاح ونوجهه للوجن
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created successfully! Please login.')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +100,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
             onPressed: () {},
             child: const Text('العربية', style: TextStyle(color: Colors.white70, fontSize: 14)),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: _blueAccent))
+        : SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -67,12 +123,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 children: [
                   const Text('Sign Up',
                       style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   const Text('Create an account to get started',
                       style: TextStyle(color: _textDim, fontSize: 13)),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Role selector
                   const Text('I am a',
                       style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 10),
@@ -95,40 +150,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   _buildLabel('Name'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: 'John Doe', icon: Icons.person_outline),
+                  _buildTextField(hint: 'Your Name', icon: Icons.person_outline, controller: _nameController),
                   const SizedBox(height: 14),
 
                   _buildLabel('Email'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: 'student@university.edu', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                  _buildTextField(hint: 'Your Email', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, controller: _emailController),
                   const SizedBox(height: 14),
 
                   _buildLabel('Password'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: '••••••••', icon: Icons.lock_outline, obscure: true),
+                  _buildTextField(hint: 'Your Password', icon: Icons.lock_outline, obscure: true, controller: _passwordController),
                   const SizedBox(height: 14),
 
                   _buildLabel('Phone Number'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: '+1234567890', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
-                  const SizedBox(height: 14),
-
-                  _buildLabel('University'),
-                  const SizedBox(height: 6),
-                  _buildTextField(hint: 'University Name', icon: Icons.school_outlined),
+                  _buildTextField(hint: 'Your Phone Number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone, controller: _phoneController),
+                  
+                  if (_role == 0) ...[
+                    const SizedBox(height: 14),
+                    _buildLabel('University'),
+                    const SizedBox(height: 6),
+                    _buildTextField(hint: 'Your University Name', icon: Icons.school_outlined, controller: _universityController),
+                  ],
+                  
                   const SizedBox(height: 22),
 
-                  _buildPrimaryButton('Sign Up', () {
-                    // TODO: handle sign up
-                  }),
-                  const SizedBox(height: 14),
-                  _buildGoogleButton('Sign up with Google'),
-                  const SizedBox(height: 20),
+                  _buildPrimaryButton('Sign Up', _handleSignUp),
+                  const SizedBox(height: 24),
 
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        // TODO: Navigate to LoginScreen
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        );
                       },
                       child: RichText(
                         text: const TextSpan(
@@ -157,14 +214,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget _buildLabel(String text) => Text(text,
       style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500));
 
-  Widget _buildTextField({required String hint, required IconData icon, bool obscure = false, TextInputType keyboardType = TextInputType.text}) =>
+  Widget _buildTextField({required String hint, required IconData icon, bool obscure = false, TextInputType keyboardType = TextInputType.text, required TextEditingController controller}) =>
       TextField(
+        controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: _textDim, fontSize: 14),
+          hintStyle: const TextStyle(color: _textDim, fontSize: 14, fontStyle: FontStyle.italic),
           prefixIcon: Icon(icon, color: _textDim, size: 18),
           filled: true,
           fillColor: _fieldColor,
@@ -187,20 +245,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             elevation: 0,
           ),
           child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-        ),
-      );
-
-  Widget _buildGoogleButton(String label) => SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: OutlinedButton.icon(
-          onPressed: () {},
-          icon: const Text('G', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Colors.white24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
         ),
       );
 }

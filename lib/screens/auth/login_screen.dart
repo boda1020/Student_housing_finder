@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../data/services/auth_service.dart';
+import 'register_screen.dart';
+import 'forgot_password.dart';
+import '../owner/owner_dashboard_screen.dart';
 
 const _bgColor = Color(0xFF0D1117);
 const _cardColor = Color(0xFF161B22);
@@ -6,8 +10,60 @@ const _fieldColor = Color(0xFF1E2530);
 const _blueAccent = Color(0xFF2979FF);
 const _textDim = Color(0xFF8B949E);
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  final _authService = AuthService();
+
+  Future<void> _handleLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.signIn(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      final isOwner = await _authService.isOwner();
+
+      if (mounted) {
+        if (isOwner) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const OwnerDashboardScreen()),
+            (route) => false,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Logged in as Student')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,14 +91,10 @@ class LoginScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {},
-            child: const Text('العربية', style: TextStyle(color: Colors.white70, fontSize: 14)),
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: _blueAccent))
+        : SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -68,33 +120,47 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   _buildLabel('Email'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: 'student@university.edu', icon: Icons.email_outlined),
+                  _buildTextField(
+                    hint: 'Your Email',
+                    icon: Icons.email_outlined,
+                    controller: _emailController,
+                  ),
                   const SizedBox(height: 16),
                   _buildLabel('Password'),
                   const SizedBox(height: 6),
-                  _buildTextField(hint: '••••••••', icon: Icons.lock_outline, obscure: true),
+                  _buildTextField(
+                    hint: 'Your Password',
+                    icon: Icons.lock_outline,
+                    obscure: true,
+                    controller: _passwordController,
+                  ),
                   const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerRight,
                     child: GestureDetector(
                       onTap: () {
-                        // TODO: Navigate to ForgotPasswordScreen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                        );
                       },
                       child: const Text('Forgot Password?',
                           style: TextStyle(color: Colors.white70, fontSize: 13)),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildPrimaryButton('Login', () {
-                    // TODO: handle login
-                  }),
-                  const SizedBox(height: 14),
-                  _buildGoogleButton('Continue with Google'),
-                  const SizedBox(height: 20),
+                  _buildPrimaryButton(
+                    'Login',
+                    _handleLogin,
+                  ),
+                  const SizedBox(height: 24),
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        // TODO: Navigate to SignUpScreen
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                        );
                       },
                       child: RichText(
                         text: const TextSpan(
@@ -122,13 +188,19 @@ class LoginScreen extends StatelessWidget {
   Widget _buildLabel(String text) => Text(text,
       style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500));
 
-  Widget _buildTextField({required String hint, required IconData icon, bool obscure = false}) =>
+  Widget _buildTextField({
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    required TextEditingController controller,
+  }) =>
       TextField(
+        controller: controller,
         obscureText: obscure,
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: _textDim, fontSize: 14),
+          hintStyle: const TextStyle(color: _textDim, fontSize: 14, fontStyle: FontStyle.italic),
           prefixIcon: Icon(icon, color: _textDim, size: 18),
           filled: true,
           fillColor: _fieldColor,
@@ -151,20 +223,6 @@ class LoginScreen extends StatelessWidget {
             elevation: 0,
           ),
           child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-        ),
-      );
-
-  Widget _buildGoogleButton(String label) => SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: OutlinedButton.icon(
-          onPressed: () {},
-          icon: const Text('G', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Colors.white24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
         ),
       );
 }

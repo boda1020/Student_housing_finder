@@ -1,9 +1,8 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../../models/property_model.dart';
+import '../../data/services/property_service.dart';
 
 class AddPropertyScreen extends StatefulWidget {
   const AddPropertyScreen({
@@ -28,6 +27,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   String _roomType = 'Single Room';
   String _status = 'Available';
   String? _initialImageUrl;
+  bool _isLoading = false;
 
   final Map<String, bool> _facilities = {
     'WiFi': false,
@@ -40,14 +40,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     'Swimming Pool': false,
   };
 
-  final List<XFile> _images = [];
-  int _mainImageIndex = 0;
+  XFile? _image;
   final ImagePicker _picker = ImagePicker();
+  final _propertyService = PropertyService();
 
   @override
   void initState() {
     super.initState();
-
     final property = widget.property;
     if (property != null) {
       _titleController.text = property.title;
@@ -77,521 +76,215 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
-    final picked = await _picker.pickMultiImage(imageQuality: 80);
-    if (picked.isEmpty) return;
-
-    setState(() {
-      _images
-        ..clear()
-        ..addAll(picked);
-      _mainImageIndex = 0;
-    });
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked != null) {
+      setState(() => _image = picked);
+    }
   }
 
-  void _setMainImage(int index) {
-    setState(() {
-      _mainImageIndex = index;
-    });
-  }
-
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final imageUrl = _images.isNotEmpty
-        ? _images[_mainImageIndex].path
-        : _initialImageUrl ??
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80';
+    setState(() => _isLoading = true);
 
-    final property = Property(
-      id: widget.property?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      address: _addressController.text.trim(),
-      price: double.tryParse(_priceController.text.trim()) ?? 0,
-      distanceToUniversity:
-          double.tryParse(_distanceController.text.trim()) ?? 0,
-      roomType: _roomType,
-      facilities: _facilities.entries
-          .where((entry) => entry.value)
-          .map((entry) => entry.key)
-          .toList(),
-      imageUrl: imageUrl,
-      status: _status,
-      description: _descriptionController.text.trim(),
-    );
+    try {
+      String imageUrl = _initialImageUrl ?? 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80';
+      
+      // If a new image is selected, we should ideally upload it to Supabase Storage first
+      // For now, if _image is not null, we'd call an upload method
+      // if (_image != null) {
+      //   imageUrl = await _propertyService.uploadPropertyImage(_image!) ?? imageUrl;
+      // }
 
-    Navigator.of(context).pop(property);
-  }
+      final property = Property(
+        id: widget.property?.id ?? '',
+        title: _titleController.text.trim(),
+        address: _addressController.text.trim(),
+        price: double.tryParse(_priceController.text.trim()) ?? 0,
+        distanceToUniversity: double.tryParse(_distanceController.text.trim()) ?? 0,
+        roomType: _roomType,
+        facilities: _facilities.entries.where((entry) => entry.value).map((entry) => entry.key).toList(),
+        imageUrl: imageUrl,
+        status: _status,
+        description: _descriptionController.text.trim(),
+      );
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontStyle: FontStyle.normal,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
+      if (widget.property == null) {
+        await _propertyService.addProperty(property);
+      } else {
+        await _propertyService.updateProperty(property);
+      }
 
-  InputDecoration _buildInputDecoration({String? hintText}) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Colors.white54),
-      filled: true,
-      fillColor: const Color(0xFF0F1B2A),
-      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-        borderSide: BorderSide(color: Colors.white24),
-      ),
-      enabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-        borderSide: BorderSide(color: Colors.white24),
-      ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-        borderSide: BorderSide(color: Colors.white70, width: 1.2),
-      ),
-    );
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1B2A),
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F1B2A),
+        backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
-        title: Text(widget.property == null ? 'Add Property' : 'Edit Property'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        title: Text(widget.property == null ? 'Add Property' : 'Edit Property', style: const TextStyle(color: Colors.white)),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
       ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            children: [
-              _buildImageUploadSection(),
-              const SizedBox(height: 16),
-              _buildPropertyDetailsSection(),
-              const SizedBox(height: 16),
-              _buildRoomAndFacilitiesSection(),
-              const SizedBox(height: 24),
-              _buildSubmitButton(),
-              const SizedBox(height: 24),
-            ],
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF2979FF)))
+        : Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildImageSection(),
+                const SizedBox(height: 20),
+                _buildTextField('Title', _titleController, 'e.g. Modern Studio'),
+                const SizedBox(height: 16),
+                _buildTextField('Description', _descriptionController, 'Describe your property...', maxLines: 3),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildTextField('Price (\$)', _priceController, '500', isNumber: true)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildTextField('Distance (km)', _distanceController, '1.2', isNumber: true)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildTextField('Address', _addressController, '123 University St'),
+                const SizedBox(height: 16),
+                _buildDropdown('Room Type', ['Single Room', 'Studio', '1BR', '2BR', '3BR'], _roomType, (val) => setState(() => _roomType = val!)),
+                const SizedBox(height: 16),
+                const Text('Facilities', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildFacilitiesGrid(),
+                const SizedBox(height: 32),
+                _buildSubmitButton(),
+              ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
-  Widget _buildImageUploadSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF15202D),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(64),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader('Upload Images'),
-          const Text(
-            'Drag to reorder images. Click star to set main image.',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
+  Widget _buildImageSection() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: _image != null 
+          ? ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(_image!.path), fit: BoxFit.cover))
+          : _initialImageUrl != null
+            ? ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.network(_initialImageUrl!, fit: BoxFit.cover))
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.cloud_upload, size: 28, color: Colors.white54),
-                  SizedBox(width: 10),
-                  Text(
-                    'Tap to select images from gallery',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_images.isEmpty)
-            Container(
-              width: double.infinity,
-              height: 170,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.image, size: 42, color: Colors.white24),
+                  Icon(Icons.add_a_photo_outlined, color: Colors.white54, size: 40),
                   SizedBox(height: 8),
-                  Text(
-                    'No images selected yet',
-                    style: TextStyle(color: Colors.white54),
-                  ),
+                  Text('Add Property Image', style: TextStyle(color: Colors.white54)),
                 ],
               ),
-            )
-          else ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(
-                File(_images[_mainImageIndex].path),
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 120,
-              child: ReorderableListView(
-                scrollDirection: Axis.horizontal,
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                onReorder: (oldIndex, newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) newIndex -= 1;
-                    final item = _images.removeAt(oldIndex);
-                    _images.insert(newIndex, item);
-
-                    if (_mainImageIndex == oldIndex) {
-                      _mainImageIndex = newIndex;
-                    } else if (oldIndex < _mainImageIndex &&
-                        newIndex >= _mainImageIndex) {
-                      _mainImageIndex -= 1;
-                    } else if (oldIndex > _mainImageIndex &&
-                        newIndex <= _mainImageIndex) {
-                      _mainImageIndex += 1;
-                    }
-                  });
-                },
-                children: List.generate(_images.length, (index) {
-                  final file = File(_images[index].path);
-                  return Padding(
-                    key: ValueKey(_images[index].path),
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Image.file(
-                            file,
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              width: 120,
-                              height: 120,
-                              color: Colors.white10,
-                              child: const Center(
-                                child: Icon(Icons.broken_image,
-                                    color: Colors.white54),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: GestureDetector(
-                            onTap: () => _setMainImage(index),
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0x66000000),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                index == _mainImageIndex
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                size: 18,
-                                color: index == _mainImageIndex
-                                    ? Colors.yellow
-                                    : Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
 
-  Widget _buildPropertyDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF15202D),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(64),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+  Widget _buildTextField(String label, TextEditingController controller, String hint, {bool isNumber = false, int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          maxLines: maxLines,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
+            filled: true,
+            fillColor: const Color(0xFF1E2530),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader('Property Title'),
-          TextFormField(
-            controller: _titleController,
-            style: const TextStyle(color: Colors.white),
-            decoration: _buildInputDecoration(
-                hintText: 'e.g., Cozy Studio near Campus'),
-            validator: (value) =>
-                (value == null || value.isEmpty) ? 'Title is required' : null,
+          validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown(String label, List<String> items, String value, ValueChanged<String?> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: value,
+          dropdownColor: const Color(0xFF161B22),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF1E2530),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
           ),
-          const SizedBox(height: 14),
-          _buildSectionHeader('Description'),
-          TextFormField(
-            controller: _descriptionController,
-            style: const TextStyle(color: Colors.white),
-            maxLines: 4,
-            decoration:
-                _buildInputDecoration(hintText: 'Describe your property...'),
-          ),
-          const SizedBox(height: 14),
-          Row(
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFacilitiesGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 4),
+      itemCount: _facilities.length,
+      itemBuilder: (context, index) {
+        String key = _facilities.keys.elementAt(index);
+        bool isSelected = _facilities[key]!;
+        return InkWell(
+          onTap: () => setState(() => _facilities[key] = !isSelected),
+          child: Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Monthly Price (\$)',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _buildInputDecoration(hintText: '500'),
-                      validator: (value) {
-                        final v = double.tryParse(value ?? '');
-                        if (v == null || v <= 0) {
-                          return 'Enter a valid price';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
+              Checkbox(
+                value: isSelected,
+                onChanged: (val) => setState(() => _facilities[key] = val!),
+                activeColor: const Color(0xFF2979FF),
+                side: const BorderSide(color: Colors.white24),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Distance to University (km)',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _distanceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _buildInputDecoration(hintText: '2.5'),
-                      validator: (value) {
-                        final v = double.tryParse(value ?? '');
-                        if (v == null || v < 0) {
-                          return 'Enter a valid distance';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              Text(key, style: const TextStyle(color: Colors.white70, fontSize: 13)),
             ],
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Address',
-            style: TextStyle(
-              color: Colors.white70,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _addressController,
-            style: const TextStyle(color: Colors.white),
-            decoration: _buildInputDecoration(hintText: '123 Main St, City'),
-          ),
-          const SizedBox(height: 14),
-          _buildSectionHeader('Status'),
-          DropdownButtonFormField<String>(
-            initialValue: _status,
-            dropdownColor: const Color(0xFF0F1B2A),
-            decoration: _buildInputDecoration(),
-            items: const [
-              DropdownMenuItem(value: 'Available', child: Text('Available')),
-              DropdownMenuItem(value: 'Rented', child: Text('Rented')),
-              DropdownMenuItem(value: 'Closed', child: Text('Closed')),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _status = value);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoomAndFacilitiesSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF15202D),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(64),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader('Room Type'),
-          DropdownButtonFormField<String>(
-            initialValue: _roomType,
-            dropdownColor: const Color(0xFF0F1B2A),
-            decoration: _buildInputDecoration(),
-            items: const [
-              DropdownMenuItem(
-                  value: 'Single Room', child: Text('Single Room')),
-              DropdownMenuItem(value: 'Studio', child: Text('Studio')),
-              DropdownMenuItem(value: '1BR', child: Text('1BR')),
-              DropdownMenuItem(value: '2BR', child: Text('2BR')),
-              DropdownMenuItem(value: '3BR', child: Text('3BR')),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _roomType = value);
-              }
-            },
-          ),
-          const SizedBox(height: 14),
-          _buildSectionHeader('Facilities'),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _facilities.keys.map((facility) {
-              final selected = _facilities[facility] ?? false;
-              return GestureDetector(
-                onTap: () => setState(() => _facilities[facility] = !selected),
-                child: Container(
-                  width: 150,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: selected ? Colors.white10 : const Color(0xFF0F1B2A),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Checkbox(
-                        value: selected,
-                        onChanged: (value) => setState(
-                            () => _facilities[facility] = value ?? false),
-                        activeColor: Colors.white,
-                        checkColor: Colors.black,
-                        side: const BorderSide(color: Colors.white24),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      Expanded(
-                        child: Text(
-                          facility,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
+      height: 50,
       child: ElevatedButton(
+        onPressed: _submit,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        onPressed: _submit,
-        child: Text(widget.property == null ? 'Submit' : 'Save'),
+        child: Text(widget.property == null ? 'Add Property' : 'Save Changes', style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }

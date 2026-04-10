@@ -1,52 +1,73 @@
+import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/property_model.dart';
 
-/// Fetches property listings.
-///
-/// Currently uses local mock data. Replace this implementation with
-/// a real data source (e.g., Supabase) when ready.
 class PropertyService {
-  PropertyService._();
+  final _supabase = Supabase.instance.client;
 
-  static Future<List<Property>> fetchProperties() async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+  // Fetch all available properties for students
+  Future<List<Property>> fetchAllProperties() async {
+    final response = await _supabase
+        .from('properties')
+        .select()
+        .eq('status', 'Available')
+        .order('created_at', ascending: false);
+    
+    return (response as List).map((json) => Property.fromJson(json)).toList();
+  }
 
-    return [
-      Property(
-        id: '1',
-        title: 'Cozy Studio Apartment Near Campus',
-        address: '123 University Ave, College Town',
-        price: 650,
-        distanceToUniversity: 0.8,
-        roomType: 'Studio',
-        facilities: ['WiFi', 'AC', 'Washer'],
-        imageUrl:
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80',
-        status: 'Available',
-      ),
-      Property(
-        id: '2',
-        title: 'Bright 1BR with Study Nook',
-        address: '789 College St, Campus District',
-        price: 820,
-        distanceToUniversity: 1.2,
-        roomType: '1BR',
-        facilities: ['WiFi', 'Gym', 'Parking'],
-        imageUrl:
-            'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=80',
-        status: 'Available',
-      ),
-      Property(
-        id: '3',
-        title: 'Modern 2BR Apartment with Balcony',
-        address: '456 Elm St, Downtown',
-        price: 1200,
-        distanceToUniversity: 2.4,
-        roomType: '2BR',
-        facilities: ['WiFi', 'Elevator', 'Pool'],
-        imageUrl:
-            'https://images.unsplash.com/photo-1560185127-c0aa0f86cb4a?auto=format&fit=crop&w=1600&q=80',
-        status: 'Available',
-      ),
-    ];
+  // Fetch properties owned by the current user (Owner)
+  Future<List<Property>> fetchOwnerProperties() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await _supabase
+        .from('properties')
+        .select()
+        .eq('owner_id', userId)
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) => Property.fromJson(json)).toList();
+  }
+
+  // Add a new property
+  Future<void> addProperty(Property property) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
+
+    final data = property.toJson();
+    data['owner_id'] = userId;
+    data.remove('id'); // Let Supabase generate the ID
+
+    await _supabase.from('properties').insert(data);
+  }
+
+  // Update an existing property
+  Future<void> updateProperty(Property property) async {
+    await _supabase
+        .from('properties')
+        .update(property.toJson())
+        .eq('id', property.id);
+  }
+
+  // Delete a property
+  Future<void> deleteProperty(String propertyId) async {
+    await _supabase.from('properties').delete().eq('id', propertyId);
+  }
+
+  // Upload property image to Supabase Storage
+  Future<String?> uploadPropertyImage(File imageFile) async {
+    try {
+      final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      final path = 'properties/$fileName';
+      
+      await _supabase.storage.from('images').upload(path, imageFile);
+      
+      final imageUrl = _supabase.storage.from('images').getPublicUrl(path);
+      return imageUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
   }
 }
