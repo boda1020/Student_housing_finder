@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../data/services/property_service.dart';
 import '../../models/property_model.dart';
+import '../../providers/app_provider.dart';
 import '../../screens/owner/add_property_screen.dart';
 import '../../screens/owner/owner_properties_screen.dart';
 import '../../screens/owner/owner_profile_screen.dart';
 import '../../screens/property_details_screen.dart';
+import '../../screens/common/notifications_screen.dart';
+import '../../screens/chat/chat_list_screen.dart';
 import '../../widgets/filter/filter_panel.dart';
 import '../../widgets/owner/owner_dashboard_content.dart';
+import '../../providers/property_provider.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -19,51 +24,22 @@ class OwnerDashboardScreen extends StatefulWidget {
 class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   int _currentIndex = 0;
   bool _loading = true;
-  bool _isArabic = false;
-  bool _isDarkMode = false;
   String _searchQuery = '';
+  
   final String _ownerName = 'Abdulrahman Khamis';
   final String _ownerEmail = 'bdalrhmanhkames@gmail.com';
   final String _ownerPhone = '+20 1201332850';
 
   List<Property> _properties = [];
   final Set<String> _favorites = {};
+  final _propertyService = PropertyService();
+
   FilterValues _filters = FilterValues(
     priceRange: const RangeValues(0, 5000),
     maxDistance: 20,
     roomTypes: [],
     facilities: [],
   );
-
-  Map<String, String> get _t => _isArabic
-      ? {
-          'app.title': 'Student Housing Finder',
-          'app.subtitle': 'Property Manager',
-          'search.placeholder': 'ابحث عن الموقع أو الجامعة...',
-          'add.property': 'أضف عقار',
-          'properties.available': 'عقار متاح',
-          'filter': 'فلتر',
-          'notifications': 'الإشعارات',
-          'home': 'الرئيسية',
-          'favorites': 'المفضلة',
-          'messages': 'الرسائل',
-          'profile': 'حسابي',
-        }
-      : {
-          'app.title': 'Student Housing Finder',
-          'app.subtitle': 'Property Manager',
-          'search.placeholder': 'Search by location, university...',
-          'add.property': 'Add Property',
-          'properties.available': 'Properties Available',
-          'filter': 'Filter',
-          'notifications': 'Notifications',
-          'home': 'Home',
-          'favorites': 'Favorites',
-          'messages': 'Messages',
-          'profile': 'Profile',
-        };
-
-  String t(String key) => _t[key] ?? key;
 
   @override
   void initState() {
@@ -73,48 +49,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Future<void> _loadProperties() async {
     setState(() => _loading = true);
-
     try {
-      final properties = await PropertyService.fetchProperties();
+      final properties = await _propertyService.fetchOwnerProperties();
       setState(() {
         _properties = properties;
-        if (_properties.isNotEmpty) {
-          _favorites.clear();
-          _favorites.add(_properties.first.id);
-        }
       });
-    } catch (_) {
-      // If Supabase isn't set up yet, fall back to placeholder data.
-      setState(() {
-        _properties = [
-          Property(
-            id: '1',
-            title: 'Cozy Studio Apartment Near Campus',
-            address: '123 University Ave, College Town',
-            price: 650,
-            distanceToUniversity: 0.8,
-            roomType: 'Studio',
-            facilities: ['WiFi', 'AC', 'Washer'],
-            imageUrl:
-                'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80',
-            status: 'Available',
-          ),
-          Property(
-            id: '2',
-            title: 'Bright 1BR with Study Nook',
-            address: '789 College St, Campus District',
-            price: 820,
-            distanceToUniversity: 1.2,
-            roomType: '1BR',
-            facilities: ['WiFi', 'Gym', 'Parking'],
-            imageUrl:
-                'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=80',
-            status: 'Available',
-          ),
-        ];
-        _favorites.clear();
-        if (_properties.isNotEmpty) _favorites.add(_properties.first.id);
-      });
+    } catch (e) {
+      debugPrint('Error loading owner properties: $e');
     } finally {
       setState(() => _loading = false);
     }
@@ -130,19 +71,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     });
   }
 
-  void _toggleLanguage() {
-    setState(() => _isArabic = !_isArabic);
-  }
-
-  void _toggleDarkMode(bool enabled) {
-    setState(() => _isDarkMode = enabled);
-  }
-
   void _openFilters() {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F1B2A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -159,32 +92,27 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   void _onAddProperty() async {
-    final newProperty = await Navigator.of(context).push<Property>(
-      MaterialPageRoute(
-        builder: (context) => const AddPropertyScreen(),
-      ),
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const AddPropertyScreen()),
     );
 
-    if (newProperty != null) {
-      setState(() {
-        _properties.insert(0, newProperty);
-      });
+    if (result == true) {
+      _loadProperties();
     }
   }
 
   void _onOpenNotifications() {
-    // TODO: Navigate to notifications screen.
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+    );
   }
 
   Future<void> _openMyProperties() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (context) => OwnerPropertiesScreen(
-          properties: _properties,
-        ),
-      ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const OwnerPropertiesScreen()),
     );
-    setState(() {});
+    _loadProperties();
   }
 
   void _openPropertyDetails(Property property) {
@@ -198,39 +126,34 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appProvider = Provider.of<AppProvider>(context);
+    final t = appProvider.translate;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1B2A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).cardColor,
+        selectedItemColor: const Color(0xFF2979FF),
+        unselectedItemColor: Colors.grey,
         items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
-            label: t('home'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.favorite_border),
-            label: t('favorites'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.chat_bubble_outline),
-            label: t('messages'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline),
-            label: t('profile'),
-          ),
+          BottomNavigationBarItem(icon: const Icon(Icons.home_filled), label: t('home')),
+          BottomNavigationBarItem(icon: const Icon(Icons.favorite), label: t('favorites')),
+          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble), label: t('messages')),
+          BottomNavigationBarItem(icon: const Icon(Icons.person), label: t('profile')),
         ],
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _buildBody(),
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF2979FF)))
+            : _buildBody(appProvider, t),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppProvider appProvider, String Function(String) t) {
     switch (_currentIndex) {
       case 0:
         return OwnerDashboardContent(
@@ -241,38 +164,29 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           onSearchChanged: (value) => setState(() => _searchQuery = value),
           searchQuery: _searchQuery,
           onOpenFilters: _openFilters,
-          onToggleLanguage: _toggleLanguage,
+          onToggleLanguage: appProvider.toggleLanguage,
           onOpenNotifications: _onOpenNotifications,
           onPropertyTap: _openPropertyDetails,
-          isArabic: _isArabic,
+          isArabic: appProvider.isArabic,
           t: t,
+          filters: _filters,
         );
       case 1:
-        return Center(
-          child: Text(
-            t('favorites'),
-            style: const TextStyle(color: Colors.white),
-          ),
-        );
+        return Center(child: Text(t('favorites'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface)));
       case 2:
-        return Center(
-          child: Text(
-            t('messages'),
-            style: const TextStyle(color: Colors.white),
-          ),
-        );
+        return const ChatListScreen();
       case 3:
       default:
         return OwnerProfileScreen(
           name: _ownerName,
           email: _ownerEmail,
           phone: _ownerPhone,
-          isArabic: _isArabic,
-          isDarkMode: _isDarkMode,
-          onToggleLanguage: _toggleLanguage,
-          onToggleTheme: _toggleDarkMode,
+          isArabic: appProvider.isArabic,
+          isDarkMode: appProvider.isDarkMode,
+          onToggleLanguage: appProvider.toggleLanguage,
+          onToggleTheme: (val) => appProvider.toggleTheme(),
           onLogout: () {
-            // TODO: Implement logout behavior.
+            // Implement logout logic
           },
           onMyProperties: _openMyProperties,
         );

@@ -1,18 +1,5 @@
 import 'package:flutter/material.dart';
-
-class FilterValues {
-  FilterValues({
-    required this.priceRange,
-    required this.maxDistance,
-    required this.roomTypes,
-    required this.facilities,
-  });
-
-  RangeValues priceRange;
-  double maxDistance;
-  List<String> roomTypes;
-  List<String> facilities;
-}
+import '../../providers/property_provider.dart';
 
 class FilterPanel extends StatefulWidget {
   const FilterPanel({
@@ -57,98 +44,145 @@ class _FilterPanelState extends State<FilterPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 12,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(4),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 24,
+        right: 24,
+        top: 12,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0D1117) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Filters',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              IconButton(
+                onPressed: widget.onClose,
+                icon: Icon(Icons.close, color: isDark ? Colors.white54 : Colors.black54),
+              )
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Customize your search to find the perfect property',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+          const SizedBox(height: 32),
+          
+          Text(
+            'Price Range',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Filters',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          const SizedBox(height: 12),
+          RangeSlider(
+            values: filters.priceRange,
+            min: 0,
+            max: 5000,
+            divisions: 50,
+            activeColor: const Color(0xFF2979FF),
+            inactiveColor: isDark ? Colors.white12 : Colors.black12,
+            labels: RangeLabels(
+              '\$${filters.priceRange.start.toInt()}',
+              '\$${filters.priceRange.end.toInt()}',
             ),
-            const SizedBox(height: 14),
-            const Text(
-              'Price range',
-              style: TextStyle(color: Colors.white70),
+            onChanged: (values) => setState(() => filters.priceRange = values),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('\$0', style: TextStyle(color: Colors.grey, fontSize: 13)),
+              Text('\$5000', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            ],
+          ),
+          
+          const SizedBox(height: 32),
+          Text(
+            'Max Distance (km)',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-            RangeSlider(
-              values: filters.priceRange,
-              min: 0,
-              max: 5000,
-              divisions: 20,
-              labels: RangeLabels(
-                '\$${filters.priceRange.start.toInt()}',
-                '\$${filters.priceRange.end.toInt()}',
-              ),
-              onChanged: (values) => setState(() => filters.priceRange = values),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Max distance (km)',
-              style: TextStyle(color: Colors.white70),
-            ),
-            Slider(
-              value: filters.maxDistance,
-              min: 1,
-              max: 20,
-              divisions: 19,
-              label: '${filters.maxDistance.toStringAsFixed(0)} km',
-              onChanged: (value) => setState(() => filters.maxDistance = value),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _reset,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Reset'),
+          ),
+          const SizedBox(height: 12),
+          Slider(
+            value: filters.maxDistance,
+            min: 1,
+            max: 50,
+            divisions: 49,
+            activeColor: const Color(0xFF2979FF),
+            inactiveColor: isDark ? Colors.white12 : Colors.black12,
+            onChanged: (value) => setState(() => filters.maxDistance = value),
+          ),
+          Text('Up to ${filters.maxDistance.toInt()} km', 
+            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          
+          const SizedBox(height: 40),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _reset,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
+                  child: Text('Reset Filters', 
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onApply(filters);
-                      widget.onClose();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: const Text('Apply'),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onApply(filters);
+                    widget.onClose();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2979FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
                   ),
+                  child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              ],
-            ),
-            const SizedBox(height: 18),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

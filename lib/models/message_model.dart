@@ -1,0 +1,37 @@
+class MessageModel {
+  final String id;
+  final String senderId;
+  final String receiverId;
+  final String content;
+  final bool isRead;
+  final DateTime createdAt;
+
+  MessageModel({
+    required this.id,
+    required this.senderId,
+    required this.receiverId,
+    required this.content,
+    required this.isRead,
+    required this.createdAt,
+  });
+
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    return MessageModel(
+      id: json['id'],
+      senderId: json['sender_id'],
+      receiverId: json['receiver_id'],
+      content: json['content'],
+      isRead: json['is_read'] ?? false,
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'content': content,
+      'is_read': isRead,
+    };
+  }
+}

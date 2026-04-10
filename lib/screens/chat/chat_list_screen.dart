@@ -1,77 +1,86 @@
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
 
-  static const _dummyChats = [
-    {
-      'id': 'tenant-1',
-      'name': 'Sara Williams',
-      'message': 'Hi, is the studio still available?',
-      'time': '2:14 PM',
-    },
-    {
-      'id': 'tenant-2',
-      'name': 'Ahmed Khalid',
-      'message': 'I can come see it this weekend.',
-      'time': '11:05 AM',
-    },
-    {
-      'id': 'tenant-3',
-      'name': 'Nour Hassan',
-      'message': 'Can you share the exact address?',
-      'time': 'Yesterday',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final blueAccent = const Color(0xFF2979FF);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1B2A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F1B2A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        title: const Text('Messages'),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Conversations',
+                style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('1 conversations',
+                style: TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
-        itemCount: _dummyChats.length,
-        itemBuilder: (context, index) {
-          final chat = _dummyChats[index];
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => ChatScreen(
-                  chatId: chat['id'] as String,
-                  name: chat['name'] as String,
-                ),
-              ));
-            },
-            leading: CircleAvatar(
-              backgroundColor: Colors.blueGrey.shade700,
-              child: Text(
-                (chat['name'] as String).substring(0, 1),
-                style: const TextStyle(color: Colors.white),
-              ),
+      body: Column(
+        children: [
+          Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+          Expanded(
+            child: ListView.builder(
+              itemCount: 1,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ChatScreen(
+                          chatId: '1',
+                          name: 'Property Owner',
+                        ),
+                      ),
+                    );
+                  },
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF21262D) : const Color(0xFFF0F2F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text('O',
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Property Owner',
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w600, fontSize: 16)),
+                      Text('less than a minute ago',
+                          style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    ],
+                  ),
+                  subtitle: const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text('عاعلغ',
+                        style: TextStyle(color: Colors.grey, fontSize: 14)),
+                  ),
+                );
+              },
             ),
-            title: Text(
-              chat['name'] as String,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              chat['message'] as String,
-              style: TextStyle(color: Colors.white70),
-            ),
-            trailing: Text(
-              chat['time'] as String,
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
