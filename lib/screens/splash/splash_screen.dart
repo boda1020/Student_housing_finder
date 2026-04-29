@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../onboarding/onboarding_screen.dart';
-import '../owner/owner_dashboard_screen.dart';
+import '../home/student_home_screen.dart';
+import '../home/owner_dashboard_screen.dart';
 import '../../data/services/auth_service.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -49,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => isOwner ? const OwnerDashboardScreen() : const OnboardingScreen(),
+            builder: (_) => isOwner ? const OwnerDashboardScreen() : const StudentHomeScreen(),
           ),
         );
       }

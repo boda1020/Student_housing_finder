@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../data/services/auth_service.dart';
 import 'register_screen.dart';
 import 'forgot_password.dart';
-import '../owner/owner_dashboard_screen.dart';
+import '../home/owner_dashboard_screen.dart';
+import '../home/student_home_screen.dart';
 
 const _bgColor = Color(0xFF0D1117);
 const _cardColor = Color(0xFF161B22);
@@ -49,8 +50,10 @@ class _LoginScreenState extends State<LoginScreen> {
             (route) => false,
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged in as Student')),
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const StudentHomeScreen()),
+            (route) => false,
           );
         }
       }
