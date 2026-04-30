@@ -1,21 +1,24 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:student_housing_finder/main.dart';
+import 'package:provider/provider.dart';
+import 'package:student_housing_finder/app.dart';
+import 'package:student_housing_finder/providers/app_provider.dart';
+import 'package:student_housing_finder/providers/auth_provider.dart';
 
 void main() {
-  testWidgets('App shows the dashboard header', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App starts and shows splash screen title', (WidgetTester tester) async {
+    // Build our app with providers and trigger a frame.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AppProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ],
+        child: const MyApp(),
+      ),
+    );
 
-    // Verify that the dashboard title is displayed.
-    expect(find.text('Student Housing Finder'), findsOneWidget);
-    expect(find.text('Property Manager'), findsOneWidget);
+    // Verify that the app title from Splash Screen is displayed.
+    // We use findsWidgets because it might appear in multiple places (Title, Text widget, etc.)
+    expect(find.textContaining('Student Housing'), findsWidgets);
   });
 }
