@@ -1,236 +1,201 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
+import '../../data/services/notification_service.dart';
+import '../chat/chat_screen.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final _notificationService = NotificationService();
+  final _supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationService.markAllAsRead();
+  }
 
   @override
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
+    final theme = Theme.of(context);
     final isDark = appProvider.isDarkMode;
-    final isArabic = appProvider.isArabic;
-    final primaryColor = const Color(0xFF5C61F2);
-    final textColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final bgColor = isDark ? const Color(0xFF0D1217) : Colors.white;
-
-    // Dummy data for notifications
-    final List<Map<String, dynamic>> notifications = [
-      {
-        'title': isArabic ? 'رسالة جديدة' : 'New Message',
-        'body': isArabic 
-            ? 'لديك رسالة جديدة من طالب بخصوص عقارك.' 
-            : 'You have a new message from a student regarding your property.',
-        'time': isArabic ? 'منذ ساعتين' : '2 hours ago',
-        'isRead': false,
-        'icon': Icons.chat_bubble_outline,
-      },
-      {
-        'title': isArabic ? 'تمت الموافقة على العقار' : 'Property Approved',
-        'body': isArabic 
-            ? 'تمت الموافقة على عقارك "استوديو مودرن" وهو الآن متاح.' 
-            : 'Your property "Modern Studio" has been approved and is now live.',
-        'time': isArabic ? 'منذ 5 ساعات' : '5 hours ago',
-        'isRead': true,
-        'icon': Icons.check_circle_outline,
-      },
-    ];
 
     return Scaffold(
-      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
-          appProvider.translate('notifications'),
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          appProvider.translate('notifications'), 
+          style: const TextStyle(fontWeight: FontWeight.bold)
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.done_all, color: primaryColor),
-            onPressed: () {},
+            icon: const Icon(Icons.done_all_rounded),
+            tooltip: appProvider.translate('mark.all.read'),
+            onPressed: () => _notificationService.markAllAsRead(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: appProvider.translate('delete.all') ?? 'Delete all',
+            onPressed: () => _showDeleteAllDialog(context, appProvider),
           ),
         ],
       ),
-      body: notifications.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.withOpacity(0.5)),
-                  const SizedBox(height: 16),
-                  Text(
-                    isArabic ? 'لا توجد تنبيهات بعد' : 'No notifications yet',
-                    style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 18),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _notificationService.getNotifications(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final notifications = snapshot.data ?? [];
+          if (notifications.isEmpty) return _buildEmptyState(theme, appProvider);
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: notifications.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = notifications[index];
+              return Dismissible(
+                key: Key(item['id'].toString()),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              separatorBuilder: (context, index) => Divider(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
-              itemBuilder: (context, index) {
-                final notification = notifications[index];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: notification['isRead'] 
-                          ? (isDark ? Colors.white10 : Colors.grey.withOpacity(0.1))
-                          : primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      notification['icon'],
-                      color: notification['isRead'] ? Colors.grey : primaryColor,
-                      size: 24,
-                    ),
-                  ),
-                  title: Text(
-                    notification['title'],
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: notification['isRead'] ? FontWeight.normal : FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        notification['body'],
-                        style: TextStyle(color: textColor.withOpacity(0.7)),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notification['time'],
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  onTap: () => _showNotificationDetails(context, notification, isDark, isArabic, primaryColor, textColor),
-                );
-              },
-            ),
+                  child: const Icon(Icons.delete_outline, color: Colors.white),
+                ),
+                onDismissed: (direction) {
+                  _notificationService.deleteNotification(item['id'].toString());
+                },
+                child: _buildNotificationCard(item, theme, appProvider, isDark),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  void _showNotificationDetails(BuildContext context, Map<String, dynamic> notification, bool isDark, bool isArabic, Color primaryColor, Color textColor) {
-    showModalBottomSheet(
+  Future<void> _showDeleteAllDialog(BuildContext context, AppProvider appProvider) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1F26) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      builder: (context) => AlertDialog(
+        title: Text(appProvider.translate('delete.all.title') ?? 'Delete All?'),
+        content: Text(appProvider.translate('delete.all.confirm') ?? 'Are you sure you want to delete all notifications?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), 
+            child: Text(appProvider.translate('cancel'))
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              appProvider.translate('delete'), 
+              style: const TextStyle(color: Colors.red)
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _notificationService.deleteAllNotifications();
+    }
+  }
+
+  Widget _buildNotificationCard(Map<String, dynamic> data, ThemeData theme, AppProvider appProvider, bool isDark) {
+    final bool isRead = data['is_read'] ?? false;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isRead 
+            ? (isDark ? const Color(0xFF1E2530).withOpacity(0.5) : theme.cardTheme.color?.withOpacity(0.6))
+            : (isDark ? const Color(0xFF1E2530) : theme.cardTheme.color),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isRead 
+              ? theme.dividerColor.withOpacity(0.05) 
+              : theme.primaryColor.withOpacity(0.2)
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(notification['icon'], color: primaryColor, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notification['title'],
-                        style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        notification['time'],
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              isArabic ? 'محتوى التنبيه:' : 'Notification Content:',
-              style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              notification['body'],
-              style: TextStyle(color: textColor, fontSize: 16, height: 1.6),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      isArabic ? 'فهمت' : 'Got it',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                if (notification['title'].contains('Message') || notification['title'].contains('رسالة')) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // هنا ممكن نفتح شاشة الشات مستقبلاً
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: primaryColor),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Text(
-                        isArabic ? 'الرد الآن' : 'Reply Now',
-                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
+        boxShadow: [
+          if (!isRead) 
+            BoxShadow(
+              color: theme.primaryColor.withOpacity(0.05), 
+              blurRadius: 10, 
+              offset: const Offset(0, 4)
+            )
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: (data['type'] == 'chat' ? Colors.blue : Colors.orange).withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            data['type'] == 'chat' ? Icons.chat_bubble_outline_rounded : Icons.notifications_active_outlined, 
+            color: data['type'] == 'chat' ? Colors.blue : Colors.orange,
+            size: 20,
+          ),
         ),
+        title: Text(
+          data['title'] ?? '', 
+          style: TextStyle(
+            fontWeight: isRead ? FontWeight.w500 : FontWeight.bold, 
+            fontSize: 15,
+            color: isDark ? Colors.white : Colors.black87,
+          )
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            data['body'] ?? '', 
+            style: TextStyle(
+              color: isDark ? Colors.white70 : theme.textTheme.bodySmall?.color, 
+              fontSize: 13
+            )
+          ),
+        ),
+        trailing: IconButton(
+          icon: Icon(Icons.delete_outline_rounded, color: Colors.grey.withOpacity(0.5), size: 20),
+          onPressed: () => _notificationService.deleteNotification(data['id'].toString()),
+        ),
+        onTap: () async {
+          await _notificationService.markAsRead(data['id'].toString());
+          if (mounted && data['type'] == 'chat' && data['data'] != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: data['data'].toString())));
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, AppProvider appProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
+          const SizedBox(height: 16),
+          Text(
+            appProvider.translate('no.notifications'),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+          ),
+        ],
       ),
     );
   }
 }
-

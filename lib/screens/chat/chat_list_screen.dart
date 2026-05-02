@@ -1,70 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
+import '../../data/services/chat_service.dart';
 import 'chat_screen.dart';
-
-class ChatPreview {
-  final String id;
-  final String agentName;
-  final String agentAvatarUrl;
-  final String propertyName;
-  final String lastMessage;
-  final DateTime lastMessageTime;
-  final int unreadCount;
-  final bool isOnline;
-
-  const ChatPreview({
-    required this.id,
-    required this.agentName,
-    required this.agentAvatarUrl,
-    required this.propertyName,
-    required this.lastMessage,
-    required this.lastMessageTime,
-    required this.unreadCount,
-    required this.isOnline,
-  });
-}
-
-final List<ChatPreview> _dummyChats = [
-  ChatPreview(
-    id: 'chat_001',
-    agentName: 'Alex Rivera',
-    agentAvatarUrl: 'https://i.pravatar.cc/150?img=11',
-    propertyName: 'North Avenue Studios',
-    lastMessage: '11:30 AM works perfectly. I\'ll send the link...',
-    lastMessageTime: DateTime.now().subtract(const Duration(minutes: 2)),
-    unreadCount: 2,
-    isOnline: true,
-  ),
-  ChatPreview(
-    id: 'chat_002',
-    agentName: 'Sara Hassan',
-    agentAvatarUrl: 'https://i.pravatar.cc/150?img=5',
-    propertyName: 'Maple Residences',
-    lastMessage: 'The lease starts on the 1st of next month.',
-    lastMessageTime: DateTime.now().subtract(const Duration(hours: 1)),
-    unreadCount: 0,
-    isOnline: false,
-  ),
-  ChatPreview(
-    id: 'chat_003',
-    agentName: 'Omar Nabil',
-    agentAvatarUrl: 'https://i.pravatar.cc/150?img=15',
-    propertyName: 'Sunrise Apartments',
-    lastMessage: 'Can you share your ID for verification?',
-    lastMessageTime: DateTime.now().subtract(const Duration(hours: 5)),
-    unreadCount: 1,
-    isOnline: true,
-  ),
-  ChatPreview(
-    id: 'chat_004',
-    agentName: 'Nada Salah',
-    agentAvatarUrl: 'https://i.pravatar.cc/150?img=9',
-    propertyName: 'Campus View Flats',
-    lastMessage: 'Thank you! I\'ll be ready.',
-    lastMessageTime: DateTime.now().subtract(const Duration(days: 1)),
-    unreadCount: 0,
-    isOnline: false,
-  ),
-];
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -74,98 +12,145 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  final List<ChatPreview> _chats = _dummyChats;
-  final bool _isLoading = false;
+  final ChatService _chatService = ChatService();
   String _searchQuery = '';
 
-  List<ChatPreview> get _filtered => _chats
-      .where((c) =>
-          c.agentName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          c.propertyName.toLowerCase().contains(_searchQuery.toLowerCase()))
-      .toList();
-
-  String _formatTime(DateTime time) {
+  String _formatTime(DateTime time, AppProvider appProvider) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    final isAr = appProvider.isArabic;
+    
+    if (diff.inMinutes < 60) {
+      return isAr ? 'منذ ${diff.inMinutes} د' : '${diff.inMinutes}m ago';
+    }
+    if (diff.inHours < 24) {
+      return isAr ? 'منذ ${diff.inHours} س' : '${diff.inHours}h ago';
+    }
+    return isAr ? 'منذ ${diff.inDays} ي' : '${diff.inDays}d ago';
   }
 
   @override
   Widget build(BuildContext context) {
+    final appProvider = Provider.of<AppProvider>(context);
+    final theme = Theme.of(context);
+    final isAr = appProvider.isArabic;
+    final isDark = appProvider.isDarkMode;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.cardBackground,
-        elevation: 0,
-        title: const Text(
-          'Messages',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        title: Text(
+          appProvider.translate('messages'),
+          style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : theme.primaryColor),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Colors.white70),
-            onPressed: () {},
-          ),
-        ],
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
             child: TextField(
               onChanged: (v) => setState(() => _searchQuery = v),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                hintText: 'Search conversations...',
-                hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon:
-                    const Icon(Icons.search, color: Colors.white38, size: 20),
-                filled: true,
-                fillColor: AppColors.cardBackground,
+                hintText: appProvider.translate('search'),
+                prefixIcon: Icon(Icons.search_rounded, color: theme.primaryColor),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
               ),
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.accentBlue))
-                : _filtered.isEmpty
-                    ? const Center(
-                        child: Text('No conversations yet.',
-                            style: TextStyle(color: Colors.white38)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, __) => Divider(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          indent: 80,
-                          height: 1,
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _chatService.getMyChats(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                final chats = snapshot.data ?? [];
+                final filtered = chats.where((c) {
+                  final name = c['partner_name'].toString().toLowerCase();
+                  final property = c['property_title'].toString().toLowerCase();
+                  return name.contains(_searchQuery.toLowerCase()) || property.contains(_searchQuery.toLowerCase());
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded, size: 64, color: theme.primaryColor.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        Text(
+                          appProvider.translate('no.conversations'),
+                          style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
                         ),
-                        itemBuilder: (context, index) {
-                          final chat = _filtered[index];
-                          return _ChatTile(
-                            chat: chat,
-                            timeLabel: _formatTime(chat.lastMessageTime),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(chatId: chat.id),
-                              ),
-                            ),
-                          );
-                        },
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => Divider(
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                    indent: 85,
+                    endIndent: 20,
+                  ),
+                  itemBuilder: (context, index) {
+                    final chat = filtered[index];
+                    return Dismissible(
+                      key: Key(chat['id']),
+                      direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
+                      background: Container(
+                        alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.redAccent,
+                        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
                       ),
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                            title: Text(appProvider.translate('delete.chat.title') ?? 'Delete Chat'),
+                            content: Text(appProvider.translate('delete.chat.confirm') ?? 'Are you sure you want to delete this chat?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false), 
+                                child: Text(appProvider.translate('cancel') ?? 'Cancel', style: TextStyle(color: isDark ? Colors.white60 : Colors.black54))
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true), 
+                                child: Text(appProvider.translate('delete') ?? 'Delete', style: const TextStyle(color: Colors.red))
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (direction) {
+                        _chatService.deleteChat(chat['id']);
+                      },
+                      child: _ChatTile(
+                        chat: chat,
+                        theme: theme,
+                        isAr: isAr,
+                        isDark: isDark,
+                        timeLabel: _formatTime(DateTime.parse(chat['last_message_time']), appProvider),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(chatId: chat['id']),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -173,120 +158,80 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 }
 
-class AppColors {
-  static const Color background = Color(0xFF0F1B2A);
-  static const Color cardBackground = Color(0xFF1E2A3A);
-  static const Color accentBlue = Color(0xFF2979FF);
-  static const Color accentGreen = Color(0xFF4CAF50);
-}
-
 class _ChatTile extends StatelessWidget {
-  final ChatPreview chat;
+  final Map<String, dynamic> chat;
   final String timeLabel;
   final VoidCallback onTap;
+  final ThemeData theme;
+  final bool isAr;
+  final bool isDark;
 
   const _ChatTile({
     required this.chat,
     required this.timeLabel,
     required this.onTap,
+    required this.theme,
+    required this.isAr,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final avatar = chat['partner_avatar'] ?? 'https://ui-avatars.com/api/?name=${chat['partner_name']}';
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.white54 : Colors.grey[600];
+    
+    return ListTile(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundImage: NetworkImage(chat.agentAvatarUrl),
-                  backgroundColor: AppColors.cardBackground,
-                ),
-                if (chat.isOnline)
-                  Positioned(
-                    bottom: 1,
-                    right: 1,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.accentGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: AppColors.background, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    chat.agentName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: chat.unreadCount > 0
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    chat.propertyName,
-                    style: const TextStyle(
-                        color: AppColors.accentBlue, fontSize: 11),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    chat.lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: chat.unreadCount > 0
-                          ? Colors.white70
-                          : Colors.white38,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  timeLabel,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-                const SizedBox(height: 6),
-                if (chat.unreadCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentBlue,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${chat.unreadCount}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-              ],
-            ),
-          ],
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: theme.primaryColor.withOpacity(0.2), width: 1),
         ),
+        child: CircleAvatar(
+          radius: 28,
+          backgroundImage: NetworkImage(avatar),
+          backgroundColor: theme.primaryColor.withOpacity(0.05),
+        ),
+      ),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              chat['partner_name'],
+              style: TextStyle(
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            timeLabel,
+            style: TextStyle(color: subColor, fontSize: 11),
+          ),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 2),
+          Text(
+            chat['property_title'],
+            style: TextStyle(color: theme.primaryColor, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            chat['last_message'],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: subColor, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

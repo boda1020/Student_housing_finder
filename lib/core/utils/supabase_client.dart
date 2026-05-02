@@ -9,8 +9,8 @@ class SupabaseClientService {
 
   static Future<void> initialize() async {
     await supa.Supabase.initialize(
-      url: 'https://fclnqzxrctacrpjvoldb.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjbG5xenhyY3RhY3JwanZvbGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI2NDksImV4cCI6MjA5MDAxODY0OX0.J7mEfPD2B70J8SDquYGZmadbOjh_tnUUjqnQ5tVkWTo',
+      url: 'https://qleulxlgighwxrdkobdt.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsZXVseGxnaWdod3hyZGtvYmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NTI4MjcsImV4cCI6MjA5MzEyODgyN30.r2O2rlHzYR5Plzx6uWfcAARbzW0Inb5ZXtnsEhglbws',
     );
 
     print('✅ Supabase Connected Successfully!');

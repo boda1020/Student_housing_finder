@@ -3,18 +3,47 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 
 class FilterScreen extends StatefulWidget {
-  const FilterScreen({super.key});
+  final Map<String, dynamic>? initialFilters;
+  const FilterScreen({super.key, this.initialFilters});
 
   @override
   State<FilterScreen> createState() => _FilterScreenState();
 }
 
 class _FilterScreenState extends State<FilterScreen> {
-  final TextEditingController _minPriceController = TextEditingController();
-  final TextEditingController _maxPriceController = TextEditingController();
-  String _selectedType = 'Apartment';
-  int _selectedRooms = 1;
-  final List<String> _amenities = [];
+  final _minPriceController = TextEditingController();
+  final _maxPriceController = TextEditingController();
+  String _selectedType = 'All';
+  String _selectedFurnishing = 'All';
+  int _selectedRooms = 0;
+  final Map<String, bool> _amenities = {
+    'WiFi': false,
+    'Fridge': false,
+    'Washing Machine': false,
+    'TV': false,
+    'Kitchen': false,
+    'AC': false,
+    'Water Heater': false,
+    'Study Desk': false,
+    'Reception': false,
+    'Salon': false,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialFilters != null) {
+      _minPriceController.text = widget.initialFilters?['minPrice']?.toString() ?? '';
+      _maxPriceController.text = widget.initialFilters?['maxPrice']?.toString() ?? '';
+      _selectedType = widget.initialFilters?['type'] ?? 'All';
+      _selectedFurnishing = widget.initialFilters?['furnishing'] ?? 'All';
+      _selectedRooms = widget.initialFilters?['rooms'] ?? 0;
+      if (widget.initialFilters?['amenities'] != null) {
+        final Map<String, bool> savedAmenities = Map<String, bool>.from(widget.initialFilters!['amenities']);
+        _amenities.addAll(savedAmenities);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -26,255 +55,268 @@ class _FilterScreenState extends State<FilterScreen> {
   @override
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
-    final isDark = appProvider.isDarkMode;
-    final isArabic = appProvider.isArabic;
-    final primaryColor = const Color(0xFF5C61F2);
-    final textColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final bgColor = isDark ? const Color(0xFF0D1217) : Colors.white;
+    final theme = Theme.of(context);
+    final isAr = appProvider.isArabic;
+    final primaryColor = theme.primaryColor;
+    final textColor = theme.textTheme.bodyLarge?.color;
+    final cardColor = theme.cardTheme.color;
 
     return Scaffold(
-      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.close, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          isArabic ? 'الفلترة' : 'Filters',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
+        title: Text(appProvider.translate('filter.results')),
         actions: [
           TextButton(
             onPressed: () {
               setState(() {
                 _minPriceController.clear();
                 _maxPriceController.clear();
-                _amenities.clear();
-                _selectedRooms = 1;
+                _selectedType = 'All';
+                _selectedRooms = 0;
+                _amenities.updateAll((key, value) => false);
               });
             },
-            child: Text(
-              isArabic ? 'إعادة ضبط' : 'Reset',
-              style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-            ),
-          ),
+            child: Text(appProvider.translate('reset'), style: TextStyle(color: primaryColor)),
+          )
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              isArabic ? 'فئة السكن' : 'Category',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-            ),
+            _buildLabel(appProvider.translate('price.range'), theme),
             const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPriceField(_minPriceController, appProvider.translate('min'), '0 ${appProvider.translate('currency')}', cardColor!, textColor!),
+                ),
+                const SizedBox(width: 16),
+                Text('-', style: TextStyle(color: Colors.grey[400], fontSize: 20)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPriceField(_maxPriceController, appProvider.translate('max'), '10000 ${appProvider.translate('currency')}', cardColor, textColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            _buildLabel(appProvider.translate('property.type'), theme),
+            const SizedBox(height: 12),
             Wrap(
-              spacing: 12,
-              children: [
-                _buildTypeChip('Apartment', isArabic ? 'شقة' : 'Apartment'),
-                _buildTypeChip('Studio', isArabic ? 'استوديو' : 'Studio'),
-                _buildTypeChip('Shared', isArabic ? 'سكن مشترك' : 'Shared'),
-              ],
+              spacing: 10,
+              runSpacing: 10,
+              children: ['All', 'Apartment', 'Studio', 'Shared', 'Villa'].map((type) {
+                final isSelected = _selectedType == type;
+                return ChoiceChip(
+                  label: Text(_translateType(type, appProvider)),
+                  selected: isSelected,
+                  selectedColor: primaryColor,
+                  labelStyle: TextStyle(color: isSelected ? Colors.white : null),
+                  onSelected: (selected) => setState(() => _selectedType = type),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 32),
-            Text(
-              isArabic ? 'عدد الغرف' : 'Number of Rooms',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+            _buildLabel(appProvider.translate('furnishing'), theme),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: ['All', 'Furnished', 'Unfurnished'].map((f) {
+                final isSelected = _selectedFurnishing == f;
+                return ChoiceChip(
+                  label: Text(f == 'All' ? appProvider.translate('all') : appProvider.translate(f.toLowerCase())),
+                  selected: isSelected,
+                  selectedColor: primaryColor,
+                  labelStyle: TextStyle(color: isSelected ? Colors.white : null),
+                  onSelected: (selected) => setState(() => _selectedFurnishing = f),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                );
+              }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
+            _buildLabel(appProvider.translate('rooms'), theme),
+            const SizedBox(height: 12),
             Row(
-              children: [
-                _buildRoomButton(1),
-                const SizedBox(width: 12),
-                _buildRoomButton(2),
-                const SizedBox(width: 12),
-                _buildRoomButton(3),
-                const SizedBox(width: 12),
-                _buildRoomButton(4, label: '4+'),
-              ],
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [0, 1, 2, 3, 4].map((rooms) {
+                final isSelected = _selectedRooms == rooms;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedRooms = rooms),
+                  child: Container(
+                    width: 55,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      color: isSelected ? primaryColor : cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.1)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      rooms == 0 ? appProvider.translate('all') : rooms.toString(),
+                      style: TextStyle(color: isSelected ? Colors.white : null, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 32),
-            Text(
-              isArabic ? 'نطاق السعر' : 'Price Range',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-            ),
+            _buildLabel(appProvider.translate('amenities.features'), theme),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPriceField(
-                    controller: _minPriceController,
-                    label: isArabic ? 'الحد الأدنى' : 'Min Price',
-                    isDark: isDark,
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+              ),
+              itemCount: _amenities.length,
+              itemBuilder: (context, index) {
+                String key = _amenities.keys.elementAt(index);
+                bool isSelected = _amenities[key]!;
+                return GestureDetector(
+                  onTap: () => setState(() => _amenities[key] = !isSelected),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? primaryColor : cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getAmenityIcon(key),
+                          color: isSelected ? Colors.white : primaryColor,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _translateAmenity(key, appProvider),
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : textColor,
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isSelected) const Icon(Icons.check_circle, color: Colors.white, size: 14),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Container(
-                  height: 2,
-                  width: 12,
-                  color: Colors.grey.withOpacity(0.5),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPriceField(
-                    controller: _maxPriceController,
-                    label: isArabic ? 'الحد الأقصى' : 'Max Price',
-                    isDark: isDark,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-            const SizedBox(height: 32),
-            Text(
-              isArabic ? 'المرافق والخدمات' : 'Amenities & Services',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-            ),
-            const SizedBox(height: 16),
-            _buildAmenityTile(Icons.wifi, isArabic ? 'واي فاي مجاني' : 'Free Wifi'),
-            _buildAmenityTile(Icons.flash_on, isArabic ? 'شامل الكهرباء' : 'Electricity Included'),
-            _buildAmenityTile(Icons.local_laundry_service, isArabic ? 'غسالة ملابس' : 'Washing Machine'),
-            _buildAmenityTile(Icons.kitchen, isArabic ? 'مطبخ مشترك' : 'Shared Kitchen'),
-            _buildAmenityTile(Icons.cleaning_services, isArabic ? 'خدمة تنظيف' : 'Cleaning Service'),
-            _buildAmenityTile(Icons.security, isArabic ? 'أمن 24 ساعة' : '24/7 Security'),
-            const SizedBox(height: 40),
+            const SizedBox(height: 50),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 60,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context, {
+                    'minPrice': double.tryParse(_minPriceController.text),
+                    'maxPrice': double.tryParse(_maxPriceController.text),
+                    'type': _selectedType,
+                    'furnishing': _selectedFurnishing,
+                    'rooms': _selectedRooms,
+                    'amenities': _amenities,
+                  });
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: Text(
-                  isArabic ? 'تطبيق الفلترة' : 'Apply Filters',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: Text(appProvider.translate('apply.filters'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPriceField({
-    required TextEditingController controller,
-    required String label,
-    required bool isDark,
-  }) {
-    final primaryColor = const Color(0xFF5C61F2);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
-          decoration: InputDecoration(
-            hintText: label.contains('Min') || label.contains('الأدنى') ? '200' : '2000',
-            hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
-            prefixText: '\$ ',
-            prefixStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF5C61F2), width: 2),
-            ),
-            filled: true,
-            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-          ),
-        ),
-      ],
-    );
+  String _translateType(String type, AppProvider appProvider) {
+    switch (type) {
+      case 'All': return appProvider.translate('all');
+      case 'Apartment': return appProvider.translate('apartment');
+      case 'Studio': return appProvider.translate('studio');
+      case 'Shared': return appProvider.translate('shared.room');
+      case 'Villa': return appProvider.translate('villa');
+      default: return type;
+    }
   }
 
-  Widget _buildRoomButton(int count, {String? label}) {
-    final isSelected = _selectedRooms == count;
-    final primaryColor = const Color(0xFF5C61F2);
-    return InkWell(
-      onTap: () => setState(() => _selectedRooms = count),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 60,
-        height: 48,
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.3)),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label ?? count.toString(),
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[600],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+  String _translateAmenity(String key, AppProvider appProvider) {
+    switch (key) {
+      case 'WiFi': return appProvider.translate('wifi');
+      case 'Fridge': return appProvider.translate('fridge');
+      case 'Washing Machine': return appProvider.translate('washing.machine');
+      case 'TV': return appProvider.translate('tv');
+      case 'Kitchen': return appProvider.translate('kitchen');
+      case 'AC': return appProvider.translate('ac');
+      case 'Water Heater': return appProvider.translate('water.heater');
+      case 'Study Desk': return appProvider.translate('study.desk');
+      case 'Reception': return appProvider.translate('reception');
+      case 'Salon': return appProvider.translate('salon');
+      default: return key;
+    }
   }
 
-  Widget _buildTypeChip(String value, String label) {
-    final isSelected = _selectedType == value;
-    final primaryColor = const Color(0xFF5C61F2);
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (v) => setState(() => _selectedType = value),
-      selectedColor: primaryColor,
-      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.grey[600], fontWeight: FontWeight.bold),
-      backgroundColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
+
+  Widget _buildLabel(String text, ThemeData theme) {
+    return Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
+  }
+
+  Widget _buildPriceField(TextEditingController controller, String label, String hint, Color cardColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
-      showCheckmark: false,
-    );
-  }
-
-  Widget _buildAmenityTile(IconData icon, String label) {
-    final isSelected = _amenities.contains(label);
-    final primaryColor = const Color(0xFF5C61F2);
-    return CheckboxListTile(
-      title: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.grey),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontSize: 15)),
+          Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey.withOpacity(0.3)),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
         ],
       ),
-      value: isSelected,
-      onChanged: (v) {
-        setState(() {
-          if (v!) {
-            _amenities.add(label);
-          } else {
-            _amenities.remove(label);
-          }
-        });
-      },
-      activeColor: primaryColor,
-      contentPadding: EdgeInsets.zero,
-      controlAffinity: ListTileControlAffinity.trailing,
     );
+  }
+
+  IconData _getAmenityIcon(String key) {
+    switch (key) {
+      case 'WiFi': return Icons.wifi_rounded;
+      case 'Fridge': return Icons.kitchen_rounded;
+      case 'Washing Machine': return Icons.local_laundry_service_rounded;
+      case 'TV': return Icons.tv_rounded;
+      case 'Kitchen': return Icons.restaurant_rounded;
+      case 'AC': return Icons.ac_unit_rounded;
+      case 'Water Heater': return Icons.hot_tub_rounded;
+      case 'Study Desk': return Icons.desk_rounded;
+      case 'Reception': return Icons.meeting_room_rounded;
+      case 'Salon': return Icons.weekend_rounded;
+      default: return Icons.star_rounded;
+    }
   }
 }

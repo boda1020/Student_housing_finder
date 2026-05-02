@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF4A6CF7), Color(0xFF6A3DE8)],
+            colors: [Color(0xFF5C61F2), Color(0xFF4347D9)],
           ),
         ),
         child: FadeTransition(
@@ -89,26 +89,34 @@ class _SplashScreenState extends State<SplashScreen>
               Container(
                 width: 100,
                 height: 100,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    )
+                  ],
                 ),
                 child: const Center(
                   child: Icon(
-                    Icons.home_outlined,
+                    Icons.home_work_rounded,
                     size: 52,
-                    color: Color(0xFF4A6CF7),
+                    color: Color(0xFF5C61F2),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
               const Text(
-                'Student Housing\nFinder',
+                'Housing Finder',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: -1,
                 ),
               ),
             ],

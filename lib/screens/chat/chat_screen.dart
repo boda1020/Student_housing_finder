@@ -1,127 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../providers/app_provider.dart';
+import '../../data/services/chat_service.dart';
 
-// ============================================================
-// MODELS
-// ============================================================
-enum MessageType { text, propertyCard, attachment }
-
-class ChatMessage {
-  final String id;
-  final String senderId; // 'me' or agent id
-  final String text;
-  final DateTime timestamp;
-  final MessageType type;
-  final PropertyCardData? propertyCard;
-  final AttachmentData? attachment;
-  final bool isRead;
-
-  const ChatMessage({
-    required this.id,
-    required this.senderId,
-    required this.text,
-    required this.timestamp,
-    this.type = MessageType.text,
-    this.propertyCard,
-    this.attachment,
-    this.isRead = false,
-  });
-}
-
-class PropertyCardData {
-  final String name;
-  final String unit;
-  final String price;
-  final String imageUrl;
-  final bool isAvailable;
-  const PropertyCardData({
-    required this.name,
-    required this.unit,
-    required this.price,
-    required this.imageUrl,
-    required this.isAvailable,
-  });
-}
-
-class AttachmentData {
-  final String fileName;
-  final String fileSize;
-  const AttachmentData({required this.fileName, required this.fileSize});
-}
-
-// ============================================================
-// COLORS (Local defined to fix missing import errors)
-// ============================================================
-class AppColors {
-  static const Color background = Color(0xFF0F1B2A);
-  static const Color cardBackground = Color(0xFF1E2A3A);
-  static const Color accentBlue = Color(0xFF2979FF);
-  static const Color accentGreen = Color(0xFF4CAF50);
-}
-
-// ============================================================
-// DUMMY DATA
-// ============================================================
-List<ChatMessage> _buildDummyMessages() => [
-      ChatMessage(
-        id: 'm1',
-        senderId: 'agent',
-        text:
-            'Hi there! I saw you were interested in the North Avenue Studios. Would you like to schedule a virtual tour for tomorrow morning?',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
-        isRead: true,
-      ),
-      ChatMessage(
-        id: 'm2',
-        senderId: 'me',
-        text:
-            'That sounds great! I have classes until 11 AM. Is 11:30 AM possible?',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 8)),
-        isRead: true,
-      ),
-      ChatMessage(
-        id: 'm3',
-        senderId: 'agent',
-        text: '',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 7)),
-        type: MessageType.propertyCard,
-        propertyCard: const PropertyCardData(
-          name: 'North Avenue Studios',
-          unit: 'Unit 402',
-          price: '\$1,250/mo',
-          imageUrl:
-              'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400',
-          isAvailable: true,
-        ),
-      ),
-      ChatMessage(
-        id: 'm4',
-        senderId: 'agent',
-        text:
-            "11:30 AM works perfectly. I'll send the link a few minutes before our call. In the meantime, here's the floor plan.",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 6)),
-        isRead: true,
-      ),
-      ChatMessage(
-        id: 'm5',
-        senderId: 'agent',
-        text: '',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 6)),
-        type: MessageType.attachment,
-        attachment: const AttachmentData(
-            fileName: 'FloorPlan_Unit402.pdf', fileSize: '1.2 MB'),
-      ),
-      ChatMessage(
-        id: 'm6',
-        senderId: 'me',
-        text: 'Perfect, thank you! I\'ll be ready.',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-        isRead: true,
-      ),
-    ];
-
-// ============================================================
-// SCREEN
-// ============================================================
 class ChatScreen extends StatefulWidget {
   final String chatId;
 
@@ -132,18 +14,32 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<ChatMessage> _messages = _buildDummyMessages();
+  final ChatService _chatService = ChatService();
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  final String _agentName = 'Alex Rivera';
-  final String _agentAvatar = 'https://i.pravatar.cc/150?img=11';
-  final bool _isOnline = true;
+  final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
+  
+  Map<String, dynamic>? _chatDetails;
+  bool _isLoadingDetails = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _loadChatDetails();
+  }
+
+  Future<void> _loadChatDetails() async {
+    try {
+      final details = await _chatService.getChatDetails(widget.chatId);
+      if (mounted) {
+        setState(() {
+          _chatDetails = details;
+          _isLoadingDetails = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingDetails = false);
+    }
   }
 
   void _scrollToBottom() {
@@ -160,17 +56,17 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: 'me',
-        text: text,
-        timestamp: DateTime.now(),
-      ));
-      _controller.clear();
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _controller.clear();
+    try {
+      await _chatService.sendMessage(widget.chatId, text);
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: $e')),
+        );
+      }
+    }
   }
 
   String _formatTime(DateTime time) {
@@ -185,188 +81,199 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessageList()),
-          _buildInputBar(),
-        ],
+    final appProvider = Provider.of<AppProvider>(context);
+    final theme = Theme.of(context);
+    final isAr = appProvider.isArabic;
+
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: _buildAppBar(theme, isAr),
+        body: Column(
+          children: [
+            Expanded(child: _buildMessageStream(theme, isAr)),
+            _buildInputBar(theme, isAr),
+          ],
+        ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(ThemeData theme, bool isAr) {
+    final partnerName = _chatDetails?['partner_name'] ?? (isAr ? 'المحادثة' : 'Chat');
+    final partnerAvatar = _chatDetails?['partner_avatar'] ?? 'https://ui-avatars.com/api/?name=$partnerName';
+
     return AppBar(
-      backgroundColor: AppColors.cardBackground,
+      backgroundColor: theme.scaffoldBackgroundColor,
       elevation: 0,
-      leadingWidth: 40,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new,
-            color: Colors.white70, size: 18),
+        icon: Icon(Icons.arrow_back_ios_new, color: theme.primaryColor, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
         children: [
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundImage: NetworkImage(_agentAvatar),
-                backgroundColor: AppColors.cardBackground,
-              ),
-              if (_isOnline)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentGreen,
-                      shape: BoxShape.circle,
-                      border:
-                          Border.all(color: AppColors.cardBackground, width: 2),
-                    ),
-                  ),
-                ),
-            ],
+          CircleAvatar(
+            radius: 18,
+            backgroundImage: NetworkImage(partnerAvatar),
+            backgroundColor: theme.primaryColor.withOpacity(0.1),
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_agentName,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15)),
-              Text(
-                _isOnline ? 'Online now' : 'Offline',
-                style: TextStyle(
-                  color: _isOnline ? AppColors.accentGreen : Colors.white38,
-                  fontSize: 11,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(partnerName,
+                    style: theme.textTheme.titleLarge?.copyWith(fontSize: 16),
+                    overflow: TextOverflow.ellipsis),
+                Text(
+                  isAr ? 'نشط' : 'Active',
+                  style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.call_outlined, color: Colors.white70),
-          onPressed: () {},
-        ),
-        IconButton(
-          icon: const Icon(Icons.more_vert, color: Colors.white70),
-          onPressed: () {},
-        ),
-      ],
     );
   }
 
-  Widget _buildMessageList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final msg = _messages[index];
-        final isMe = msg.senderId == 'me';
+  Widget _buildMessageStream(ThemeData theme, bool isAr) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _chatService.getMessages(widget.chatId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final messages = snapshot.data ?? [];
+        
+        // Use a slight delay to ensure the list is rendered before scrolling
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _scrollToBottom();
+        });
 
-        final showDate = index == 0 ||
-            !_isSameDay(_messages[index - 1].timestamp, msg.timestamp);
+        if (messages.isEmpty) {
+          return Center(
+            child: Text(
+              isAr ? 'لا توجد رسائل بعد' : 'No messages yet',
+              style: theme.textTheme.bodySmall,
+            ),
+          );
+        }
 
-        return Column(
-          children: [
-            if (showDate) _DateSeparator(date: msg.timestamp),
-            _buildBubble(msg, isMe),
-          ],
+        return ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          itemCount: messages.length,
+          itemBuilder: (context, index) {
+            final msg = messages[index];
+            final isMe = msg['sender_id'] == _currentUserId;
+            final timestamp = DateTime.parse(msg['created_at']);
+
+            final showDate = index == 0 ||
+                !_isSameDay(DateTime.parse(messages[index - 1]['created_at']), timestamp);
+
+            return Column(
+              children: [
+                if (showDate) _DateSeparator(date: timestamp, isAr: isAr),
+                _buildBubble(msg['content'], isMe, timestamp, theme),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildBubble(ChatMessage msg, bool isMe) {
-    if (msg.type == MessageType.propertyCard && msg.propertyCard != null) {
-      return _PropertyCardBubble(card: msg.propertyCard!);
-    }
-    if (msg.type == MessageType.attachment && msg.attachment != null) {
-      return Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: _AttachmentBubble(
-          data: msg.attachment!,
-          isMe: isMe,
-          time: _formatTime(msg.timestamp),
-        ),
-      );
-    }
+  Widget _buildBubble(String text, bool isMe, DateTime timestamp, ThemeData theme) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: _TextBubble(
-        text: msg.text,
-        isMe: isMe,
-        time: _formatTime(msg.timestamp),
-        isRead: msg.isRead,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isMe ? theme.primaryColor : theme.cardTheme.color,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: Radius.circular(isMe ? 20 : 4),
+            bottomRight: Radius.circular(isMe ? 4 : 20),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isMe ? Colors.white : theme.textTheme.bodyLarge?.color,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatTime(timestamp),
+              style: TextStyle(
+                color: isMe ? Colors.white70 : theme.textTheme.bodySmall?.color,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputBar() {
+  Widget _buildInputBar(ThemeData theme, bool isAr) {
     return Container(
-      color: AppColors.cardBackground,
-      padding: EdgeInsets.only(
-        left: 12,
-        right: 8,
-        top: 10,
-        bottom: MediaQuery.of(context).padding.bottom + 10,
+      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          )
+        ],
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline,
-                color: Colors.white38, size: 26),
-            onPressed: () {},
-          ),
           Expanded(
             child: TextField(
               controller: _controller,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-              maxLines: 4,
-              minLines: 1,
-              onSubmitted: (_) => _sendMessage(),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               decoration: InputDecoration(
-                hintText: 'Type a message...',
-                hintStyle: const TextStyle(color: Colors.white38),
+                hintText: isAr ? 'اكتب رسالة...' : 'Type a message...',
                 filled: true,
-                fillColor: AppColors.background,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                fillColor: theme.cardTheme.color,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(30),
                   borderSide: BorderSide.none,
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
+              onSubmitted: (_) => _sendMessage(),
             ),
           ),
-          const SizedBox(width: 6),
-          IconButton(
-            icon: const Icon(Icons.emoji_emotions_outlined,
-                color: Colors.white38, size: 24),
-            onPressed: () {},
-          ),
+          const SizedBox(width: 12),
           GestureDetector(
             onTap: _sendMessage,
             child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.accentBlue,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.primaryColor,
                 shape: BoxShape.circle,
               ),
-              child:
-                  const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
             ),
           ),
         ],
@@ -377,219 +284,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _DateSeparator extends StatelessWidget {
   final DateTime date;
-  const _DateSeparator({required this.date});
+  final bool isAr;
+  const _DateSeparator({required this.date, required this.isAr});
 
-  String get _label {
+  @override
+  Widget build(BuildContext context) {
     final now = DateTime.now();
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day) return 'Today';
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day - 1) return 'Yesterday';
-    return '${date.day}/${date.month}/${date.year}';
-  }
+    String label = '${date.day}/${date.month}/${date.year}';
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      label = isAr ? 'اليوم' : 'Today';
+    }
 
-  @override
-  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        children: [
-          Expanded(
-              child: Divider(color: Colors.white.withValues(alpha: 0.08))),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(_label,
-                style: const TextStyle(color: Colors.white38, fontSize: 12)),
-          ),
-          Expanded(
-              child: Divider(color: Colors.white.withValues(alpha: 0.08))),
-        ],
-      ),
-    );
-  }
-}
-
-class _TextBubble extends StatelessWidget {
-  final String text;
-  final bool isMe;
-  final String time;
-  final bool isRead;
-
-  const _TextBubble(
-      {required this.text,
-      required this.isMe,
-      required this.time,
-      required this.isRead});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      constraints:
-          BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: isMe ? AppColors.accentBlue : AppColors.cardBackground,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMe ? 18 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 18),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Text(text,
-              style: const TextStyle(color: Colors.white, fontSize: 14.5)),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(time,
-                  style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 10)),
-              if (isMe) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  isRead ? Icons.done_all : Icons.done,
-                  size: 13,
-                  color: isRead
-                      ? Colors.lightBlueAccent
-                      : Colors.white.withValues(alpha: 0.5),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PropertyCardBubble extends StatelessWidget {
-  final PropertyCardData card;
-  const _PropertyCardBubble({required this.card});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      width: MediaQuery.of(context).size.width * 0.72,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 110,
-            width: double.infinity,
-            child: Image.network(card.imageUrl, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                      color: Colors.white10,
-                      child: const Icon(Icons.home, color: Colors.white30),
-                    )),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(card.name,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14)),
-                const SizedBox(height: 2),
-                Text('${card.unit} • ${card.price}',
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: AppColors.accentGreen.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    card.isAvailable ? 'Available Now' : 'Unavailable',
-                    style: TextStyle(
-                        color: card.isAvailable
-                            ? AppColors.accentGreen
-                            : Colors.redAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AttachmentBubble extends StatelessWidget {
-  final AttachmentData data;
-  final bool isMe;
-  final String time;
-  const _AttachmentBubble(
-      {required this.data, required this.isMe, required this.time});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      constraints:
-          BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isMe ? AppColors.accentBlue : AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.insert_drive_file_outlined,
-                color: Colors.white70, size: 22),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(data.fileName,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                Text(data.fileSize,
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 11)),
-              ],
-            ),
-          ),
-          const Icon(Icons.download_outlined, color: Colors.white60, size: 20),
-        ],
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }

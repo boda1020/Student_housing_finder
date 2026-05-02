@@ -1,79 +1,128 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
+import '../../models/property_model.dart';
+import '../../widgets/property/property_card.dart';
+import '../../data/services/property_service.dart';
+import '../property/property_details_screen.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // الألوان المتناسقة مع هوية التطبيق (Dark Theme)
-    const Color backgroundColor = Color(0xFF0F1B2A);
-    const Color cardColor = Color(0xFF1E2A3A);
-    const Color accentBlue = Color(0xFF2979FF);
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
 
-    // بيانات تجريبية للعقارات المفضلة
-    final List<Map<String, dynamic>> favoriteProperties = [
-      {
-        'title': 'Modern Studio near University',
-        'location': 'Downtown, City Center',
-        'price': r'$850/mo',
-        'image': 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500',
-        'rating': 4.8,
-      },
-      {
-        'title': 'Spacious 2BR Apartment',
-        'location': 'North Side, Academic Area',
-        'price': r'$1,200/mo',
-        'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500',
-        'rating': 4.5,
-      },
-    ];
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  final PropertyService _propertyService = PropertyService();
+  List<dynamic> _favorites = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final data = await _propertyService.getFavorites();
+      if (mounted) {
+        setState(() {
+          // فلترة العقارات المتاحة فقط
+          _favorites = data.where((f) => 
+            f['properties'] != null && f['properties']['is_available'] == true
+          ).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appProvider = Provider.of<AppProvider>(context);
+    final theme = Theme.of(context);
+    final isAr = appProvider.isArabic;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Scaffold(
-      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: cardColor,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'My Favorites',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Text(
+          isAr ? 'المفضلة' : 'Favorites',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
-      body: favoriteProperties.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: favoriteProperties.length,
-              itemBuilder: (context, index) {
-                final property = favoriteProperties[index];
-                return _buildFavoriteCard(context, property, cardColor, accentBlue);
-              },
+      body: _favorites.isEmpty
+          ? _buildEmptyState(appProvider, theme)
+          : RefreshIndicator(
+              onRefresh: _loadFavorites,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _favorites.length,
+                itemBuilder: (context, index) {
+                  final favorite = _favorites[index];
+                  final propertyData = favorite['properties'];
+                  final property = Property.fromJson(propertyData);
+                  return PropertyCard(
+                    property: property,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PropertyDetailsScreen(property: property),
+                        ),
+                      ).then((_) => _loadFavorites());
+                    },
+                    actionButtons: GestureDetector(
+                      onTap: () async {
+                        await _propertyService.toggleFavorite(property.id);
+                        _loadFavorites();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppProvider appProvider, ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.favorite_border,
+            Icons.favorite_border_rounded,
             size: 80,
-            color: Colors.white.withValues(alpha: 0.2),
+            color: theme.primaryColor.withOpacity(0.2),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'No favorites yet',
-            style: TextStyle(color: Colors.white70, fontSize: 18),
+          Text(
+            appProvider.isArabic ? 'لا توجد مفضلات' : 'No Favorites Yet',
+            style: theme.textTheme.titleLarge?.copyWith(color: theme.textTheme.bodySmall?.color),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Explore properties and tap the heart icon!',
-            style: TextStyle(color: Colors.white38, fontSize: 14),
+          Text(
+            appProvider.isArabic ? 'استكشف العقارات واضغط على أيقونة القلب!' : 'Explore properties and tap the heart icon!',
+            style: theme.textTheme.bodySmall,
           ),
         ],
       ),
@@ -83,105 +132,118 @@ class FavoritesScreen extends StatelessWidget {
   Widget _buildFavoriteCard(
     BuildContext context,
     Map<String, dynamic> property,
-    Color cardColor,
-    Color accentBlue,
+    ThemeData theme,
+    AppProvider appProvider,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    final images = property['images'] as List<dynamic>? ?? [];
+    final imageUrl = images.isNotEmpty ? images[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PropertyDetailsScreen(property: Property.fromJson(property)),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Image.network(
-                  property['image'],
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.favorite, color: Colors.red, size: 24),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ).then((_) => _loadFavorites()); // Refresh after coming back
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: theme.cardTheme.color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      property['price'],
-                      style: TextStyle(
-                        color: accentBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 18),
-                        const SizedBox(width: 4),
-                        Text(
-                          property['rating'].toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  property['title'],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: Image.network(
+                    imageUrl,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.white38, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      property['location'],
-                      style: const TextStyle(color: Colors.white38, fontSize: 13),
+                Positioned(
+                  top: 12,
+                  right: appProvider.isArabic ? null : 12,
+                  left: appProvider.isArabic ? 12 : null,
+                  child: GestureDetector(
+                    onTap: () async {
+                      await _propertyService.toggleFavorite(property['id'].toString());
+                      _loadFavorites();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${property['price']} ${appProvider.translate('currency')}',
+                        style: TextStyle(
+                          color: theme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                          const SizedBox(width: 4),
+                          Text(
+                            "4.8", // Static for now
+                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    property['title'] ?? '',
+                    style: theme.textTheme.titleLarge?.copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_rounded, color: theme.primaryColor.withOpacity(0.6), size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        property['location'] ?? '',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

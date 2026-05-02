@@ -25,7 +25,6 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..loadCurrentUser()),
-        // Add other providers here as placeholders
       ],
       child: const MyApp(),
     ),

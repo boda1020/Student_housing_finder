@@ -168,9 +168,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     
                     if (_role == 0) ...[
                       const SizedBox(height: 16),
-                      _buildLabel('University', theme),
+                      _buildLabel(appProvider.translate('university'), theme),
                       const SizedBox(height: 8),
-                      _buildTextField(hint: appProvider.translate('university.hint'), icon: Icons.school_outlined, controller: _universityController, theme: theme),
+                      _buildTextField(hint: appProvider.translate('university.name'), icon: Icons.school_outlined, controller: _universityController, theme: theme),
                     ],
                     
                     const SizedBox(height: 32),
@@ -181,10 +181,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Center(
                       child: GestureDetector(
                         onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          );
+                          Navigator.pop(context);
                         },
                         child: RichText(
                           text: TextSpan(

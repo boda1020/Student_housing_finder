@@ -19,7 +19,7 @@ final ThemeData appDarkTheme = ThemeData(
     onPrimary: Colors.white,
   ),
   appBarTheme: const AppBarTheme(
-    backgroundColor: Colors.transparent,
+    backgroundColor: _darkBg,
     elevation: 0,
     centerTitle: true,
     iconTheme: IconThemeData(color: Colors.white),
@@ -48,7 +48,7 @@ final ThemeData appDarkTheme = ThemeData(
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: _primaryColor, width: 1),
+      borderSide: const BorderSide(color: _primaryColor, width: 1.5),
     ),
   ),
   textTheme: const TextTheme(
@@ -59,4 +59,3 @@ final ThemeData appDarkTheme = ThemeData(
     bodySmall: TextStyle(color: _darkTextDim, fontSize: 12),
   ),
 );
-

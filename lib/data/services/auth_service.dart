@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthService {
   final _supabase = Supabase.instance.client;
 
-  // تسجيل حساب جديد
+  // Sign up a new user
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -33,20 +33,12 @@ class AuthService {
     return response;
   }
 
-  // تسجيل الدخول العادي
+  // Regular sign in
   Future<AuthResponse> signIn(String email, String password) async {
     return await _supabase.auth.signInWithPassword(email: email, password: password);
   }
 
-  // تسجيل الدخول بجوجل
-  Future<void> signInWithGoogle() async {
-    await _supabase.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: 'io.supabase.studenthousing://login-callback',
-    );
-  }
-
-  // تسجيل الخروج
+  // Sign out
   Future<void> signOut() async {
     await _supabase.auth.signOut();
   }

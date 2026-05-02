@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1021592807985",
+    "project_id": "student-housing-finder-4f514",
+    "storage_bucket": "student-housing-finder-4f514.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021592807985:android:cc9c009fd551d63988c310",
+        "android_client_info": {
+          "package_name": "com.example.student_housing_finder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJyG1LfJOue_LB4inRnyRCAbvtXYrFtCs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
