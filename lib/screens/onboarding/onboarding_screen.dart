@@ -78,18 +78,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final List<_OnboardingData> pages = [
       _OnboardingData(
         icon: Icons.search_rounded,
-        title: appProvider.translate('onboarding.title1'),
-        subtitle: appProvider.translate('onboarding.subtitle1'),
+        title: appProvider.translate('onboarding_title1'),
+        subtitle: appProvider.translate('onboarding_subtitle1'),
       ),
       _OnboardingData(
         icon: Icons.chat_bubble_outline_rounded,
-        title: appProvider.translate('onboarding.title2'),
-        subtitle: appProvider.translate('onboarding.subtitle2'),
+        title: appProvider.translate('onboarding_title2'),
+        subtitle: appProvider.translate('onboarding_subtitle2'),
       ),
       _OnboardingData(
         icon: Icons.business_outlined,
-        title: appProvider.translate('onboarding.title3'),
-        subtitle: appProvider.translate('onboarding.subtitle3'),
+        title: appProvider.translate('onboarding_title3'),
+        subtitle: appProvider.translate('onboarding_subtitle3'),
       ),
     ];
 
@@ -171,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                         child: Text(
                           _currentPage == pages.length - 1
-                              ? appProvider.translate('get.started')
+                              ? appProvider.translate('get_started')
                               : appProvider.translate('next'),
                           style: const TextStyle(
                             fontSize: 16,

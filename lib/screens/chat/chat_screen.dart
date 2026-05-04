@@ -56,6 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
     _controller.clear();
     try {
       await _chatService.sendMessage(widget.chatId, text);
@@ -63,7 +64,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
+          SnackBar(content: Text('${appProvider.translate('error')}: $e')),
         );
       }
     }
@@ -88,19 +89,19 @@ class _ChatScreenState extends State<ChatScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        appBar: _buildAppBar(theme, isAr),
+        appBar: _buildAppBar(theme, isAr, appProvider),
         body: Column(
           children: [
-            Expanded(child: _buildMessageStream(theme, isAr)),
-            _buildInputBar(theme, isAr),
+            Expanded(child: _buildMessageStream(theme, isAr, appProvider)),
+            _buildInputBar(theme, isAr, appProvider),
           ],
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ThemeData theme, bool isAr) {
-    final partnerName = _chatDetails?['partner_name'] ?? (isAr ? 'المحادثة' : 'Chat');
+  PreferredSizeWidget _buildAppBar(ThemeData theme, bool isAr, AppProvider appProvider) {
+    final partnerName = _chatDetails?['partner_name'] ?? appProvider.translate('messages');
     final partnerAvatar = _chatDetails?['partner_avatar'] ?? 'https://ui-avatars.com/api/?name=$partnerName';
 
     return AppBar(
@@ -126,7 +127,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     style: theme.textTheme.titleLarge?.copyWith(fontSize: 16),
                     overflow: TextOverflow.ellipsis),
                 Text(
-                  isAr ? 'نشط' : 'Active',
+                  appProvider.translate('active'),
                   style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -137,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageStream(ThemeData theme, bool isAr) {
+  Widget _buildMessageStream(ThemeData theme, bool isAr, AppProvider appProvider) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _chatService.getMessages(widget.chatId),
       builder: (context, snapshot) {
@@ -155,7 +156,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (messages.isEmpty) {
           return Center(
             child: Text(
-              isAr ? 'لا توجد رسائل بعد' : 'No messages yet',
+              appProvider.translate('no_conversations'),
               style: theme.textTheme.bodySmall,
             ),
           );
@@ -175,7 +176,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
             return Column(
               children: [
-                if (showDate) _DateSeparator(date: timestamp, isAr: isAr),
+                if (showDate) _DateSeparator(date: timestamp, appProvider: appProvider),
                 _buildBubble(msg['content'], isMe, timestamp, theme),
               ],
             );
@@ -232,7 +233,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildInputBar(ThemeData theme, bool isAr) {
+  Widget _buildInputBar(ThemeData theme, bool isAr, AppProvider appProvider) {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
       decoration: BoxDecoration(
@@ -252,7 +253,7 @@ class _ChatScreenState extends State<ChatScreen> {
               controller: _controller,
               style: TextStyle(color: theme.textTheme.bodyLarge?.color),
               decoration: InputDecoration(
-                hintText: isAr ? 'اكتب رسالة...' : 'Type a message...',
+                hintText: appProvider.translate('type_message'),
                 filled: true,
                 fillColor: theme.cardTheme.color,
                 border: OutlineInputBorder(
@@ -284,15 +285,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _DateSeparator extends StatelessWidget {
   final DateTime date;
-  final bool isAr;
-  const _DateSeparator({required this.date, required this.isAr});
+  final AppProvider appProvider;
+  const _DateSeparator({required this.date, required this.appProvider});
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     String label = '${date.day}/${date.month}/${date.year}';
     if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      label = isAr ? 'اليوم' : 'Today';
+      label = appProvider.translate('today');
     }
 
     return Padding(

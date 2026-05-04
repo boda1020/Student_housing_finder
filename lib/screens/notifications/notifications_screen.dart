@@ -27,6 +27,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final appProvider = Provider.of<AppProvider>(context);
     final theme = Theme.of(context);
     final isDark = appProvider.isDarkMode;
+    final isAr = appProvider.isArabic;
 
     return Scaffold(
       appBar: AppBar(
@@ -37,52 +38,55 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.done_all_rounded),
-            tooltip: appProvider.translate('mark.all.read'),
+            tooltip: appProvider.translate('mark_all_read'),
             onPressed: () => _notificationService.markAllAsRead(),
           ),
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: appProvider.translate('delete.all') ?? 'Delete all',
+            tooltip: appProvider.translate('delete_all'),
             onPressed: () => _showDeleteAllDialog(context, appProvider),
           ),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _notificationService.getNotifications(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _notificationService.getNotifications(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final notifications = snapshot.data ?? [];
-          if (notifications.isEmpty) return _buildEmptyState(theme, appProvider);
+            final notifications = snapshot.data ?? [];
+            if (notifications.isEmpty) return _buildEmptyState(theme, appProvider);
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final item = notifications[index];
-              return Dismissible(
-                key: Key(item['id'].toString()),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent,
-                    borderRadius: BorderRadius.circular(16),
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final item = notifications[index];
+                return Dismissible(
+                  key: Key(item['id'].toString()),
+                  direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
+                  background: Container(
+                    alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.delete_outline, color: Colors.white),
                   ),
-                  child: const Icon(Icons.delete_outline, color: Colors.white),
-                ),
-                onDismissed: (direction) {
-                  _notificationService.deleteNotification(item['id'].toString());
-                },
-                child: _buildNotificationCard(item, theme, appProvider, isDark),
-              );
-            },
-          );
-        },
+                  onDismissed: (direction) {
+                    _notificationService.deleteNotification(item['id'].toString());
+                  },
+                  child: _buildNotificationCard(item, theme, appProvider, isDark),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -91,8 +95,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(appProvider.translate('delete.all.title') ?? 'Delete All?'),
-        content: Text(appProvider.translate('delete.all.confirm') ?? 'Are you sure you want to delete all notifications?'),
+        title: Text(appProvider.translate('delete_all_title')),
+        content: Text(appProvider.translate('delete_all_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false), 
@@ -116,6 +120,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildNotificationCard(Map<String, dynamic> data, ThemeData theme, AppProvider appProvider, bool isDark) {
     final bool isRead = data['is_read'] ?? false;
+    final String rawTitle = data['title'] ?? '';
+    // If the title is a translation key, translate it, otherwise show as is
+    final String displayTitle = appProvider.translate(rawTitle);
 
     return Container(
       decoration: BoxDecoration(
@@ -152,7 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         title: Text(
-          data['title'] ?? '', 
+          displayTitle,
           style: TextStyle(
             fontWeight: isRead ? FontWeight.w500 : FontWeight.bold, 
             fontSize: 15,
@@ -191,7 +198,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
-            appProvider.translate('no.notifications'),
+            appProvider.translate('no_notifications'),
             style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
         ],

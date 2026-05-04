@@ -40,11 +40,11 @@ final ThemeData appLightTheme = ThemeData(
     prefixIconColor: _primaryColor,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: _primaryColor.withOpacity(0.1)),
+      borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.1)),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: _primaryColor.withOpacity(0.1)),
+      borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.1)),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),

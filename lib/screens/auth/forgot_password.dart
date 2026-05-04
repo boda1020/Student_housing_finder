@@ -14,7 +14,10 @@ class ForgotPasswordScreen extends StatelessWidget {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           leading: IconButton(
             icon: Icon(isAr ? Icons.arrow_forward_ios : Icons.arrow_back_ios, color: theme.primaryColor),
             onPressed: () => Navigator.pop(context),
@@ -55,14 +58,14 @@ class ForgotPasswordScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  appProvider.translate('forgot.password'),
+                  appProvider.translate('forgot_password_title'),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  appProvider.translate('forgot.password.subtitle'),
+                  appProvider.translate('forgot_password_subtitle'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.textTheme.bodySmall?.color,
                     height: 1.5,
@@ -85,7 +88,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   keyboardType: TextInputType.emailAddress,
                   style: theme.textTheme.bodyLarge,
                   decoration: InputDecoration(
-                    hintText: appProvider.translate('email.hint'),
+                    hintText: appProvider.translate('email_hint'),
                     prefixIcon: const Icon(Icons.email_outlined, size: 22),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
@@ -120,7 +123,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: Text(
-                      appProvider.translate('send.reset.link'),
+                      appProvider.translate('send_reset_link'),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -132,7 +135,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      appProvider.translate('back.to.login'),
+                      appProvider.translate('back_to_login'),
                       style: TextStyle(
                         color: theme.primaryColor,
                         fontWeight: FontWeight.bold,

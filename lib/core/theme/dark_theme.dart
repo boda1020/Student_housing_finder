@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 const _primaryColor = Color(0xFF5C61F2);
-const _darkBg = Color(0xFF0D1217);
-const _darkCard = Color(0xFF161B22);
+const _darkBg = Color(0xFF000000);
+const _darkCard = Color(0xFF1A1D23);
 const _darkText = Colors.white;
 const _darkTextDim = Color(0xFF8B949E);
 
@@ -30,12 +30,12 @@ final ThemeData appDarkTheme = ThemeData(
     elevation: 0,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(24),
-      side: BorderSide(color: Colors.white.withOpacity(0.05)),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: Color(0xFF1E2530),
+    fillColor: const Color(0xFF1E2530),
     hintStyle: const TextStyle(color: _darkTextDim, fontSize: 14),
     prefixIconColor: _primaryColor,
     border: OutlineInputBorder(

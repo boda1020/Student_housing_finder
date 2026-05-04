@@ -83,7 +83,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                      Text(appProvider.translate('property.owner'), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                      Text(appProvider.translate('property_owner_role'), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -92,19 +92,19 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ),
           ListTile(
             leading: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: theme.primaryColor),
-            title: Text(isDark ? (appProvider.translate('light.mode') ?? 'Light Mode') : (appProvider.translate('dark.mode') ?? 'Dark Mode')),
+            title: Text(isDark ? appProvider.translate('light_mode') : appProvider.translate('dark_mode')),
             trailing: Switch(value: isDark, onChanged: (value) => appProvider.toggleTheme(), activeColor: theme.primaryColor),
           ),
           ListTile(
             leading: Icon(Icons.translate_rounded, color: theme.primaryColor),
-            title: Text(isArabic ? 'English Language' : 'اللغة العربية'),
+            title: Text(isArabic ? appProvider.translate('english') : appProvider.translate('arabic')),
             onTap: () => appProvider.toggleLanguage(),
           ),
           const Spacer(),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            title: Text(appProvider.translate('logout') ?? 'Logout', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            title: Text(appProvider.translate('logout'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
             onTap: () async {
               await supabase.auth.signOut();
               if (mounted) {
@@ -145,7 +145,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 ),
               ),
               title: Text(
-                appProvider.translate('app.title') ?? 'Housing Finder',
+                appProvider.translate('app_title'),
                 style: TextStyle(color: appProvider.isDarkMode ? Colors.white : theme.primaryColor, fontWeight: FontWeight.bold),
               ),
               actions: [
@@ -155,7 +155,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -174,7 +174,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         final property = Property.fromJson(p);
                         return PropertyCard(
                           property: property,
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PropertyDetailsScreen(property: property, isOwnerView: true))),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => PropertyDetailsScreen(property: property, isOwnerView: true)));
+                          },
                           actionButtons: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -239,8 +241,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${appProvider.translate('hello') ?? 'Hello'}, $name! 👋', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
-                  Text(appProvider.translate('owner.subtitle') ?? 'Manage your listings', style: TextStyle(color: Colors.grey[500], fontSize: 15)),
+                  Text('${appProvider.translate('hello')}, $name! 👋', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
+                  Text(appProvider.translate('owner_subtitle'), style: TextStyle(color: Colors.grey[500], fontSize: 15)),
                 ],
               ),
             ),
@@ -257,25 +259,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   Widget _buildStatsGrid(int count, int views, AppProvider appProvider, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     final cardColor = theme.cardTheme.color!;
     final primaryColor = theme.primaryColor;
     final textColor = theme.textTheme.bodyLarge!.color!;
     
     return Row(
       children: [
-        Expanded(child: _statItem(Icons.home_work_rounded, '$count', appProvider.translate('total.properties') ?? 'Total', cardColor, primaryColor, textColor)),
+        Expanded(child: _statItem(Icons.home_work_rounded, '$count', appProvider.translate('total_properties'), cardColor, primaryColor, textColor, isDark)),
         const SizedBox(width: 12),
-        Expanded(child: _statItem(Icons.list_alt_rounded, '$count', appProvider.translate('active.listings') ?? 'Active', cardColor, primaryColor, textColor)),
+        Expanded(child: _statItem(Icons.list_alt_rounded, '$count', appProvider.translate('active_listings'), cardColor, primaryColor, textColor, isDark)),
         const SizedBox(width: 12),
-        Expanded(child: _statItem(Icons.visibility_rounded, '$views', appProvider.translate('total.views') ?? 'Views', cardColor, primaryColor, textColor)),
+        Expanded(child: _statItem(Icons.visibility_rounded, '$views', appProvider.translate('total_views'), cardColor, primaryColor, textColor, isDark)),
       ],
     );
   }
 
-  Widget _statItem(IconData icon, String value, String label, Color cardColor, Color primaryColor, Color textColor) {
+  Widget _statItem(IconData icon, String value, String label, Color cardColor, Color primaryColor, Color textColor, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.withOpacity(0.1))),
+      decoration: BoxDecoration(
+        color: cardColor, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,11 +299,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(appProvider.translate('my.properties.title') ?? 'My Properties', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
+        Text(appProvider.translate('my_properties_title'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
         TextButton.icon(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPropertyScreen())),
           icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(appProvider.translate('add.property') ?? 'Add'),
+          label: Text(appProvider.translate('add_property')),
           style: TextButton.styleFrom(foregroundColor: theme.primaryColor),
         ),
       ],
@@ -308,7 +315,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF252932) : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+             BoxShadow(
+               color: Colors.black.withOpacity(0.1),
+               blurRadius: 4,
+               offset: const Offset(0, 2),
+             )
+          ]
+        ),
         child: Icon(icon, color: color, size: 20),
       ),
     );
@@ -319,8 +336,8 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(appProvider.translate('delete.property.title')),
-        content: Text(appProvider.translate('delete.property.confirm')),
+        title: Text(appProvider.translate('delete_property_title')),
+        content: Text(appProvider.translate('delete_property_confirm')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(appProvider.translate('cancel'))),
           TextButton(
@@ -338,7 +355,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(appProvider.translate('deleted.success') ?? 'Deleted successfully'),
+              content: Text(appProvider.translate('deleted_success')),
               backgroundColor: Colors.green,
             ),
           );
@@ -347,7 +364,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(appProvider.translate('error.deleting.property')),
+              content: Text(appProvider.translate('error_deleting_property')),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -364,7 +381,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           children: [
             Icon(Icons.house_rounded, size: 60, color: theme.primaryColor.withOpacity(0.2)),
             const SizedBox(height: 16),
-            Text(appProvider.translate('no.properties.added'), style: TextStyle(color: theme.textTheme.bodySmall?.color)),
+            Text(appProvider.translate('no_properties_added'), style: TextStyle(color: theme.textTheme.bodySmall?.color)),
           ],
         ),
       ),
@@ -372,6 +389,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   Widget _buildAddAnotherCard(AppProvider appProvider, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPropertyScreen())),
       child: Container(
@@ -380,13 +398,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         decoration: BoxDecoration(
           color: theme.cardTheme.color,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: theme.primaryColor.withOpacity(0.3), style: BorderStyle.solid),
+          border: Border.all(color: theme.primaryColor.withOpacity(isDark ? 0.4 : 0.3), style: BorderStyle.solid),
         ),
         child: Column(
           children: [
             Icon(Icons.add_circle_outline_rounded, color: theme.primaryColor, size: 40),
             const SizedBox(height: 8),
-            Text(appProvider.translate('add.property') ?? 'Add New Property', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
+            Text(appProvider.translate('add_property'), style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color)),
           ],
         ),
       ),
@@ -394,18 +412,32 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   Widget _buildBottomNav(AppProvider appProvider, ThemeData theme) {
-    return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      onTap: (i) => setState(() => _currentIndex = i),
-      selectedItemColor: theme.primaryColor,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: appProvider.translate('home')),
-        BottomNavigationBarItem(icon: const Icon(Icons.analytics_rounded), label: appProvider.translate('views')),
-        BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_rounded), label: appProvider.translate('messages')),
-        BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: appProvider.translate('profile')),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark ? const Color(0xFF1A1D23) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: appProvider.translate('home')),
+          BottomNavigationBarItem(icon: const Icon(Icons.analytics_rounded), label: appProvider.translate('views')),
+          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_rounded), label: appProvider.translate('messages')),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: appProvider.translate('profile')),
+        ],
+      ),
     );
   }
 }

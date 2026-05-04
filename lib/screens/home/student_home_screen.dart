@@ -137,7 +137,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
           ),
-          title: Text(appProvider.translate('app.title') ?? 'Housing Finder', style: TextStyle(color: isDark ? Colors.white : theme.primaryColor, fontWeight: FontWeight.bold)),
+          title: Text(appProvider.translate('app_title'), style: TextStyle(color: isDark ? Colors.white : theme.primaryColor, fontWeight: FontWeight.bold)),
           actions: [
             _buildNotificationBadge(isDark, theme.primaryColor),
             const SizedBox(width: 8),
@@ -156,6 +156,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       builder: (context, snapshot) {
         final unreadCount = (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
         return Stack(
+          alignment: Alignment.center,
           children: [
             IconButton(
               icon: Icon(Icons.notifications_none_rounded, size: 28, color: isDark ? Colors.white : primaryColor),
@@ -193,7 +194,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               children: [
                 _buildPromoBanner(appProvider, theme),
                 const SizedBox(height: 25),
-                Text(appProvider.translate('properties.available'), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                Text(appProvider.translate('properties_available'), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 16),
                 if (_isLoading) const Center(child: Padding(padding: EdgeInsets.only(top: 50.0), child: CircularProgressIndicator()))
                 else if (_properties.isEmpty) _buildEmptyState(appProvider, theme)
@@ -220,7 +221,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               controller: _searchController,
               onChanged: (value) { setState(() => _searchQuery = value); _fetchProperties(); },
               decoration: InputDecoration(
-                hintText: appProvider.translate('search.campus'),
+                hintText: appProvider.translate('search_campus'),
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _fetchProperties(); }) : null,
               ),
@@ -249,7 +250,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _categoryChip(0, appProvider.translate('all.housing'), theme),
+          _categoryChip(0, appProvider.translate('all_housing'), theme),
           _categoryChip(1, appProvider.translate('apartments'), theme),
           _categoryChip(2, appProvider.translate('studio'), theme),
           _categoryChip(3, appProvider.translate('shared'), theme),
@@ -285,12 +286,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${appProvider.translate('new.listings')}\n${appProvider.translate('near.mit')}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('${appProvider.translate('new_listings')}\n${appProvider.translate('near_mit')}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 12),
-              Text(appProvider.translate('promo.text'), style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
+              Text(appProvider.translate('promo_text'), style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
             ],
           ),
-          Positioned(right: -10, bottom: -10, child: Icon(Icons.school_rounded, size: 90, color: Colors.white.withOpacity(0.2))),
+          PositionedDirectional(end: -10, bottom: -10, child: Icon(Icons.school_rounded, size: 90, color: Colors.white.withOpacity(0.2))),
         ],
       ),
     );
@@ -304,7 +305,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           StreamBuilder<Map<String, dynamic>>(
             stream: supabase.from('profiles').stream(primaryKey: ['id']).eq('id', user?.id ?? '').map((l) => l.isNotEmpty ? l.first : {}),
             builder: (context, snapshot) {
-              final name = snapshot.data?['full_name'] ?? 'User';
+              final name = snapshot.data?['full_name'] ?? appProvider.translate('user');
               final avatarUrl = snapshot.data?['avatar_url'];
               return DrawerHeader(
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)])),
@@ -312,7 +313,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircleAvatar(radius: 35, backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null, child: (avatarUrl == null || avatarUrl.isEmpty) ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'U') : null),
+                      CircleAvatar(
+                        radius: 35, 
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null, 
+                        child: (avatarUrl == null || avatarUrl.isEmpty) 
+                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)) 
+                          : null
+                      ),
                       const SizedBox(height: 12),
                       Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                     ],
@@ -323,15 +330,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
           ListTile(
             leading: Icon(appProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: theme.primaryColor),
-            title: Text(appProvider.isDarkMode ? (appProvider.translate('light.mode') ?? 'Light Mode') : (appProvider.translate('dark.mode') ?? 'Dark Mode')),
+            title: Text(appProvider.isDarkMode ? appProvider.translate('light_mode') : appProvider.translate('dark_mode')),
             trailing: Switch(value: appProvider.isDarkMode, onChanged: (value) => appProvider.toggleTheme(), activeColor: theme.primaryColor),
           ),
-          ListTile(leading: Icon(Icons.translate, color: theme.primaryColor), title: Text(appProvider.isArabic ? 'English' : 'العربية'), onTap: () => appProvider.toggleLanguage()),
+          ListTile(
+            leading: Icon(Icons.translate, color: theme.primaryColor), 
+            title: Text(appProvider.isArabic ? 'English' : 'العربية'), 
+            onTap: () => appProvider.toggleLanguage()
+          ),
           const Spacer(),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             title: Text(
-              appProvider.translate('logout') ?? 'Logout',
+              appProvider.translate('logout'),
               style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
             ),
             onTap: () async {
@@ -351,21 +362,51 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   }
 
   Widget _buildBottomNav(AppProvider appProvider, ThemeData theme) {
-    return BottomNavigationBar(
-      currentIndex: _currentNavIndex,
-      onTap: (i) => setState(() => _currentNavIndex = i),
-      selectedItemColor: theme.primaryColor,
-      type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(icon: const Icon(Icons.explore), label: appProvider.translate('explore')),
-        BottomNavigationBarItem(icon: const Icon(Icons.favorite), label: appProvider.translate('saved')),
-        BottomNavigationBarItem(icon: const Icon(Icons.chat), label: appProvider.translate('messages')),
-        BottomNavigationBarItem(icon: const Icon(Icons.person), label: appProvider.translate('profile')),
-      ],
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1D23) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _currentNavIndex,
+        onTap: (i) => setState(() => _currentNavIndex = i),
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.explore_rounded), label: appProvider.translate('explore')),
+          BottomNavigationBarItem(icon: const Icon(Icons.favorite_rounded), label: appProvider.translate('saved')),
+          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_rounded), label: appProvider.translate('messages')),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: appProvider.translate('profile')),
+        ],
+      ),
     );
   }
 
   Widget _buildEmptyState(AppProvider appProvider, ThemeData theme) {
-    return Center(child: Text(appProvider.isArabic ? 'لا توجد عقارات' : 'No properties found'));
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 50.0),
+        child: Column(
+          children: [
+            Icon(Icons.search_off_rounded, size: 60, color: Colors.grey.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text(
+              appProvider.translate('no_properties_found'),
+              style: TextStyle(color: Colors.grey.withValues(alpha: 0.8), fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -83,20 +83,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ),
                       ).then((_) => _loadFavorites());
                     },
-                    actionButtons: GestureDetector(
-                      onTap: () async {
-                        await _propertyService.toggleFavorite(property.id);
-                        _loadFavorites();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
-                      ),
-                    ),
                   );
                 },
               ),

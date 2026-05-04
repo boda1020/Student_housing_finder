@@ -71,7 +71,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     if (!_formKey.currentState!.validate()) return;
     if (_images.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('at.least.one.photo'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('at_least_one_photo'))));
       return;
     }
 
@@ -114,7 +114,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('published.success'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('published_success'))));
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -134,90 +134,102 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(appProvider.translate('add.property.title')),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildImagePicker(primaryColor, appProvider),
-                  const SizedBox(height: 24),
-                  _buildTextField(_titleController, appProvider.translate('property.title'), Icons.title_rounded, cardColor, textColor),
-                  _buildCategorySelector(appProvider, primaryColor, cardColor, textColor),
-                  _buildTextField(_descriptionController, appProvider.translate('description'), Icons.description_rounded, cardColor, textColor, maxLines: 3),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          _priceController,
-                          '${appProvider.translate('price')} (${appProvider.translate('currency')})',
-                          Icons.payments_rounded,
-                          cardColor,
-                          textColor,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return '';
-                            final n = double.tryParse(value);
-                            if (n == null || n <= 0) return '';
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField(
-                          _roomsController,
-                          appProvider.translate('rooms'),
-                          Icons.bed_rounded,
-                          cardColor,
-                          textColor,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return '';
-                            final n = int.tryParse(value);
-                            if (n == null || n <= 0) return '';
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  _buildTextField(_locationController, appProvider.translate('location'), Icons.location_on_rounded, cardColor, textColor),
-                  
-                  const Divider(height: 40),
-                  
-                  _sectionTitle(appProvider.translate('furnishing'), textColor),
-                  const SizedBox(height: 12),
-                  _buildFurnishingSelector(appProvider, primaryColor, cardColor, textColor),
-                  
-                  if (_isFurnished) ...[
+        appBar: AppBar(
+          title: Text(appProvider.translate('add_property_title')),
+          centerTitle: true,
+        ),
+      body: Directionality(
+        textDirection: appProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildImagePicker(primaryColor, appProvider),
                     const SizedBox(height: 24),
-                    _sectionTitle(appProvider.translate('amenities.features'), textColor),
+                    _buildTextField(_titleController, appProvider.translate('property_title'), Icons.title_rounded, cardColor, textColor),
+                    _buildCategorySelector(appProvider, primaryColor, cardColor, textColor),
+                    _buildTextField(_descriptionController, appProvider.translate('description'), Icons.description_rounded, cardColor, textColor, maxLines: 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            _priceController,
+                            '${appProvider.translate('price')} (${appProvider.translate('currency')})',
+                            Icons.payments_rounded,
+                            cardColor,
+                            textColor,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return '';
+                              final n = double.tryParse(value);
+                              if (n == null || n <= 0) return '';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            _roomsController,
+                            appProvider.translate('rooms'),
+                            Icons.bed_rounded,
+                            cardColor,
+                            textColor,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return '';
+                              final n = int.tryParse(value);
+                              if (n == null || n <= 0) return '';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    _buildTextField(_locationController, appProvider.translate('location'), Icons.location_on_rounded, cardColor, textColor),
+                    
+                    const Divider(height: 40),
+                    
+                    _sectionTitle(appProvider.translate('furnishing'), textColor),
                     const SizedBox(height: 12),
-                    _buildAmenitiesGrid(primaryColor, cardColor, textColor),
+                    _buildFurnishingSelector(appProvider, primaryColor, cardColor, textColor),
+                    
+                    if (_isFurnished) ...[
+                      const SizedBox(height: 24),
+                      _sectionTitle(appProvider.translate('amenities_features'), textColor),
+                      const SizedBox(height: 12),
+                      _buildAmenitiesGrid(primaryColor, cardColor, textColor),
+                      const SizedBox(height: 16),
+                      _buildTextField(_bedsController, appProvider.translate('beds_count'), Icons.king_bed_rounded, cardColor, textColor, keyboardType: TextInputType.number),
+                      const SizedBox(height: 16),
+                      _buildFeatureSwitches(appProvider, primaryColor, cardColor, textColor),
+                    ],
+                    
                     const SizedBox(height: 16),
-                    _buildTextField(_bedsController, appProvider.translate('beds.count'), Icons.king_bed_rounded, cardColor, textColor, keyboardType: TextInputType.number),
-                    const SizedBox(height: 16),
-                    _buildFeatureSwitches(appProvider, primaryColor, cardColor, textColor),
+                    _buildTextField(_otherAmenityController, appProvider.translate('other'), Icons.add_circle_outline_rounded, cardColor, textColor),
+                    const SizedBox(height: 120),
                   ],
-                  
-                  const SizedBox(height: 16),
-                  _buildTextField(_otherAmenityController, appProvider.translate('other'), Icons.add_circle_outline_rounded, cardColor, textColor),
-                  const SizedBox(height: 120),
-                ],
+                ),
               ),
             ),
-          ),
-          Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomAction(primaryColor, isDark, appProvider)),
-          if (_isLoading) Container(color: Colors.black.withOpacity(0.5), child: const Center(child: CircularProgressIndicator())),
-        ],
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildBottomAction(primaryColor, isDark, appProvider),
+            ),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withValues(alpha: 0.5),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -236,17 +248,17 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
               onTap: _pickImages,
               child: Container(
                 width: 110,
-                decoration: BoxDecoration(color: primaryColor.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: primaryColor.withOpacity(0.2))),
+                decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: primaryColor.withValues(alpha: 0.2))),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(Icons.add_a_photo_rounded, color: primaryColor, size: 28),
-                  Text(appProvider.translate('add.photos'), style: TextStyle(color: primaryColor, fontSize: 11)),
+                  Text(appProvider.translate('add_photos'), style: TextStyle(color: primaryColor, fontSize: 11)),
                 ]),
               ),
             );
           }
           return Stack(children: [
             Container(width: 110, margin: const EdgeInsetsDirectional.only(end: 12), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: FileImage(_images[index]), fit: BoxFit.cover))),
-            PositionedDirectional(top: 4, end: 16, child: GestureDetector(onTap: () => _removeImage(index), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)))),
+            PositionedDirectional(top: 4, end: 4, child: GestureDetector(onTap: () => _removeImage(index), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)))),
           ]);
         },
       ),
@@ -268,7 +280,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1))),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1))),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
@@ -289,10 +301,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   }
 
   Widget _buildCategorySelector(AppProvider appProvider, Color primaryColor, Color cardColor, Color textColor) {
-    final types = {'Apartment': appProvider.translate('apartment'), 'Studio': appProvider.translate('studio'), 'Shared': appProvider.translate('shared.room')};
+    final types = {'Apartment': appProvider.translate('apartment'), 'Studio': appProvider.translate('studio'), 'Shared': appProvider.translate('shared_room')};
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Row(children: types.entries.map((entry) => Expanded(child: GestureDetector(onTap: () => setState(() => _selectedType = entry.key), child: Container(margin: const EdgeInsets.symmetric(horizontal: 4), padding: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: _selectedType == entry.key ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: _selectedType == entry.key ? primaryColor : Colors.grey.withOpacity(0.1))), alignment: Alignment.center, child: Text(entry.value, style: TextStyle(color: _selectedType == entry.key ? Colors.white : textColor, fontSize: 12)))))).toList()),
+      child: Row(children: types.entries.map((entry) => Expanded(child: GestureDetector(onTap: () => setState(() => _selectedType = entry.key), child: Container(margin: const EdgeInsets.symmetric(horizontal: 4), padding: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: _selectedType == entry.key ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: _selectedType == entry.key ? primaryColor : Colors.grey.withValues(alpha: 0.1))), alignment: Alignment.center, child: Text(entry.value, style: TextStyle(color: _selectedType == entry.key ? Colors.white : textColor, fontSize: 12)))))).toList()),
     );
   }
 
@@ -311,7 +323,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: selected ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: selected ? primaryColor : Colors.grey.withOpacity(0.1))),
+        decoration: BoxDecoration(color: selected ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: selected ? primaryColor : Colors.grey.withValues(alpha: 0.1))),
         alignment: Alignment.center,
         child: Text(label, style: TextStyle(color: selected ? Colors.white : textColor, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
       ),
@@ -332,7 +344,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
           onTap: () => setState(() => _essentials[key] = !isSelected),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(color: isSelected ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.1))),
+            decoration: BoxDecoration(color: isSelected ? primaryColor : cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? primaryColor : Colors.grey.withValues(alpha: 0.1))),
             child: Row(children: [
               Icon(_amenityIcons[key], color: isSelected ? Colors.white : primaryColor, size: 16),
               const SizedBox(width: 8),
@@ -348,12 +360,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     switch (key) {
       case 'WiFi': return appProvider.translate('wifi');
       case 'Fridge': return appProvider.translate('fridge');
-      case 'Washing Machine': return appProvider.translate('washing.machine');
+      case 'Washing Machine': return appProvider.translate('washing_machine');
       case 'TV': return appProvider.translate('tv');
       case 'Kitchen': return appProvider.translate('kitchen');
       case 'AC': return appProvider.translate('ac');
-      case 'Water Heater': return appProvider.translate('water.heater');
-      case 'Study Desk': return appProvider.translate('study.desk');
+      case 'Water Heater': return appProvider.translate('water_heater');
+      case 'Study Desk': return appProvider.translate('study_desk');
       default: return key;
     }
   }
@@ -371,7 +383,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       onTap: () => onChanged(!value),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: value ? primaryColor.withOpacity(0.1) : cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: value ? primaryColor : Colors.grey.withOpacity(0.1))),
+        decoration: BoxDecoration(color: value ? primaryColor.withValues(alpha: 0.1) : cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: value ? primaryColor : Colors.grey.withValues(alpha: 0.1))),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(label, style: TextStyle(color: textColor, fontSize: 13)),
           Icon(value ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: value ? primaryColor : Colors.grey[400], size: 20),
@@ -383,11 +395,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   Widget _buildBottomAction(Color primaryColor, bool isDark, AppProvider appProvider) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      decoration: BoxDecoration(color: isDark ? const Color(0xFF0D1217) : Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))]),
+      decoration: BoxDecoration(color: isDark ? const Color(0xFF0D1217) : Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -5))]),
       child: ElevatedButton(
         onPressed: _submitProperty,
         style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-        child: Text(appProvider.translate('publish.now'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        child: Text(appProvider.translate('publish_now'), style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }

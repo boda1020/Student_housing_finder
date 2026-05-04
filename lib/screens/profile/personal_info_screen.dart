@@ -52,7 +52,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       // Update Password if provided
       if (_passwordController.text.isNotEmpty) {
         if (_passwordController.text.length < 6) {
-          throw Exception(appProvider.isArabic ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+          throw Exception(appProvider.translate('password_short_error'));
         }
         await _supabase.auth.updateUser(
           UserAttributes(password: _passwordController.text),
@@ -60,11 +60,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.isArabic ? 'تم تحديث الملف الشخصي بنجاح! ✅' : 'Profile Updated Successfully! ✅')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('update_success'))));
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${appProvider.isArabic ? 'خطأ' : 'Error'}: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${appProvider.translate('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -80,7 +80,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(isAr ? 'المعلومات الشخصية' : 'Personal Info', style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(appProvider.translate('personal_info'), style: const TextStyle(fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: _isLoading 
@@ -88,21 +88,21 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           : ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                Text(isAr ? 'المعلومات العامة' : 'General Information', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(appProvider.translate('general_info'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                _buildTextField(isAr ? 'الاسم الكامل' : 'Full Name', _nameController, Icons.person_outline_rounded),
+                _buildTextField(appProvider.translate('full_name'), _nameController, Icons.person_outline_rounded),
                 const SizedBox(height: 16),
-                _buildTextField(isAr ? 'رقم الهاتف' : 'Phone Number', _phoneController, Icons.phone_android_rounded, keyboardType: TextInputType.phone),
+                _buildTextField(appProvider.translate('phone_number'), _phoneController, Icons.phone_android_rounded, keyboardType: TextInputType.phone),
                 
                 const SizedBox(height: 32),
-                Text(isAr ? 'الأمان' : 'Security', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(appProvider.translate('security'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 _buildTextField(
-                  isAr ? 'كلمة مرور جديدة' : 'New Password', 
+                  appProvider.translate('new_password'), 
                   _passwordController, 
                   Icons.lock_outline_rounded,
                   isPassword: true,
-                  hint: isAr ? 'اتركه فارغاً للاحتفاظ بالحالية' : 'Leave blank to keep current',
+                  hint: appProvider.translate('password_blank_hint'),
                 ),
   
                 const SizedBox(height: 40),
@@ -114,7 +114,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     elevation: 2,
                   ),
-                  child: Text(isAr ? 'حفظ التغييرات' : 'Save Changes', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: Text(appProvider.translate('save'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ],
             ),

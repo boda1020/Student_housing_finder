@@ -100,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final avatarUrl = _userData?['avatar_url'];
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D1217) : const Color(0xFFF8F9FD),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(appProvider.translate('profile'), style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -163,16 +163,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 40),
           
           _buildCardSection([
-            _buildActionTile(Icons.person_outline_rounded, appProvider.translate('personal.info'), theme, isAr, onTap: () {
+            _buildActionTile(Icons.person_outline_rounded, appProvider.translate('personal_info') ?? "Personal Info", theme, isAr, onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const PersonalInfoScreen()));
             }),
-            _buildActionTile(Icons.star_outline_rounded, appProvider.translate('my.reviews'), theme, isAr, onTap: () {
+            _buildActionTile(Icons.star_outline_rounded, appProvider.translate('my_reviews') ?? "My Reviews", theme, isAr, onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReviewsScreen()));
             }),
-            _buildActionTile(Icons.settings_outlined, appProvider.translate('settings'), theme, isAr, onTap: () {
+            _buildActionTile(Icons.settings_outlined, appProvider.translate('settings') ?? "Settings", theme, isAr, onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
             }),
-            _buildActionTile(Icons.help_outline_rounded, appProvider.translate('help.center'), theme, isAr, onTap: () {
+            _buildActionTile(Icons.help_outline_rounded, appProvider.translate('help_center') ?? "Help Center", theme, isAr, onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpCenterScreen()));
             }),
           ], theme),
@@ -183,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity,
             height: 60,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1F24) : Colors.white,
+              color: theme.cardTheme.color,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.redAccent.withOpacity(0.1)),
             ),

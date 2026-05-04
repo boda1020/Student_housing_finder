@@ -20,13 +20,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final diff = now.difference(time);
     final isAr = appProvider.isArabic;
     
+    if (diff.inMinutes < 1) {
+      return appProvider.translate('just_now');
+    }
     if (diff.inMinutes < 60) {
-      return isAr ? 'منذ ${diff.inMinutes} د' : '${diff.inMinutes}m ago';
+      return isAr 
+        ? '${diff.inMinutes} ${appProvider.translate('mins_ago')}' 
+        : '${diff.inMinutes}${appProvider.translate('mins_ago')}';
     }
     if (diff.inHours < 24) {
-      return isAr ? 'منذ ${diff.inHours} س' : '${diff.inHours}h ago';
+      return isAr 
+        ? '${diff.inHours} ${appProvider.translate('hours_ago')}' 
+        : '${diff.inHours}${appProvider.translate('hours_ago')}';
     }
-    return isAr ? 'منذ ${diff.inDays} ي' : '${diff.inDays}d ago';
+    return isAr 
+      ? '${diff.inDays} ${appProvider.translate('days_ago')}' 
+      : '${diff.inDays}${appProvider.translate('days_ago')}';
   }
 
   @override
@@ -46,113 +55,116 @@ class _ChatListScreenState extends State<ChatListScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-              decoration: InputDecoration(
-                hintText: appProvider.translate('search'),
-                prefixIcon: Icon(Icons.search_rounded, color: theme.primaryColor),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+      body: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+              child: TextField(
+                onChanged: (v) => setState(() => _searchQuery = v),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                decoration: InputDecoration(
+                  hintText: appProvider.translate('search'),
+                  prefixIcon: Icon(Icons.search_rounded, color: theme.primaryColor),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _chatService.getMyChats(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                final chats = snapshot.data ?? [];
-                final filtered = chats.where((c) {
-                  final name = c['partner_name'].toString().toLowerCase();
-                  final property = c['property_title'].toString().toLowerCase();
-                  return name.contains(_searchQuery.toLowerCase()) || property.contains(_searchQuery.toLowerCase());
-                }).toList();
+            Expanded(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _chatService.getMyChats(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final chats = snapshot.data ?? [];
+                  final filtered = chats.where((c) {
+                    final name = c['partner_name'].toString().toLowerCase();
+                    final property = c['property_title'].toString().toLowerCase();
+                    return name.contains(_searchQuery.toLowerCase()) || property.contains(_searchQuery.toLowerCase());
+                  }).toList();
 
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.chat_bubble_outline_rounded, size: 64, color: theme.primaryColor.withOpacity(0.3)),
-                        const SizedBox(height: 16),
-                        Text(
-                          appProvider.translate('no.conversations'),
-                          style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => Divider(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-                    indent: 85,
-                    endIndent: 20,
-                  ),
-                  itemBuilder: (context, index) {
-                    final chat = filtered[index];
-                    return Dismissible(
-                      key: Key(chat['id']),
-                      direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
-                      background: Container(
-                        alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        color: Colors.redAccent,
-                        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
-                      ),
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
-                            title: Text(appProvider.translate('delete.chat.title') ?? 'Delete Chat'),
-                            content: Text(appProvider.translate('delete.chat.confirm') ?? 'Are you sure you want to delete this chat?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false), 
-                                child: Text(appProvider.translate('cancel') ?? 'Cancel', style: TextStyle(color: isDark ? Colors.white60 : Colors.black54))
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true), 
-                                child: Text(appProvider.translate('delete') ?? 'Delete', style: const TextStyle(color: Colors.red))
-                              ),
-                            ],
+                  if (filtered.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded, size: 64, color: theme.primaryColor.withOpacity(0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            appProvider.translate('no_conversations'),
+                            style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
                           ),
-                        );
-                      },
-                      onDismissed: (direction) {
-                        _chatService.deleteChat(chat['id']);
-                      },
-                      child: _ChatTile(
-                        chat: chat,
-                        theme: theme,
-                        isAr: isAr,
-                        isDark: isDark,
-                        timeLabel: _formatTime(DateTime.parse(chat['last_message_time']), appProvider),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(chatId: chat['id']),
-                          ),
-                        ),
+                        ],
                       ),
                     );
-                  },
-                );
-              },
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => Divider(
+                      color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                      indent: isAr ? 20 : 85,
+                      endIndent: isAr ? 85 : 20,
+                    ),
+                    itemBuilder: (context, index) {
+                      final chat = filtered[index];
+                      return Dismissible(
+                        key: Key(chat['id']),
+                        direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
+                        background: Container(
+                          alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          color: Colors.redAccent,
+                          child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                              title: Text(appProvider.translate('delete_chat_title')),
+                              content: Text(appProvider.translate('delete_chat_confirm')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false), 
+                                  child: Text(appProvider.translate('cancel'), style: TextStyle(color: isDark ? Colors.white60 : Colors.black54))
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true), 
+                                  child: Text(appProvider.translate('delete'), style: const TextStyle(color: Colors.red))
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) {
+                          _chatService.deleteChat(chat['id']);
+                        },
+                        child: _ChatTile(
+                          chat: chat,
+                          theme: theme,
+                          isAr: isAr,
+                          isDark: isDark,
+                          timeLabel: _formatTime(DateTime.parse(chat['last_message_time']), appProvider),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(chatId: chat['id']),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -177,10 +189,18 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appProvider = Provider.of<AppProvider>(context);
     final avatar = chat['partner_avatar'] ?? 'https://ui-avatars.com/api/?name=${chat['partner_name']}';
     final textColor = isDark ? Colors.white : Colors.black87;
     final subColor = isDark ? Colors.white54 : Colors.grey[600];
     
+    String lastMsg = chat['last_message'];
+    if (lastMsg == 'No messages yet') {
+      lastMsg = appProvider.translate('no_conversations');
+    } else if (lastMsg == 'Inquiry about property') {
+      lastMsg = appProvider.translate('inquiry_property');
+    }
+
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -226,7 +246,7 @@ class _ChatTile extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            chat['last_message'],
+            lastMsg,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: subColor, fontSize: 13),

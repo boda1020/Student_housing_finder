@@ -25,7 +25,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _handleSignUp(AppProvider appProvider) async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(appProvider.translate('fill.all.fields'))),
+        SnackBar(content: Text(appProvider.translate('fill_all_fields'))),
       );
       return;
     }
@@ -45,7 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(appProvider.translate('account.created'))),
+          SnackBar(content: Text(appProvider.translate('account_created'))),
         );
         Navigator.pushReplacement(
           context,
@@ -108,7 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      appProvider.translate('signup.subtitle'),
+                      appProvider.translate('signup_subtitle'),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.textTheme.bodySmall?.color,
                       ),
@@ -117,7 +117,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     // Role Selection
                     Text(
-                      appProvider.translate('i.am.a'),
+                      appProvider.translate('i_am_a'),
                       style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
@@ -135,7 +135,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _RoleCard(
-                            label: appProvider.translate('property.owner'),
+                            label: appProvider.translate('property_owner_role'),
                             icon: Icons.business_outlined,
                             isSelected: _role == 1,
                             onTap: () => setState(() => _role = 1),
@@ -149,28 +149,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // Form
                     _buildLabel(appProvider.translate('name'), theme),
                     const SizedBox(height: 8),
-                    _buildTextField(hint: appProvider.translate('name.hint'), icon: Icons.person_outline, controller: _nameController, theme: theme),
+                    _buildTextField(hint: appProvider.translate('name_hint'), icon: Icons.person_outline, controller: _nameController, theme: theme),
                     const SizedBox(height: 16),
 
                     _buildLabel(appProvider.translate('email'), theme),
                     const SizedBox(height: 8),
-                    _buildTextField(hint: appProvider.translate('email.hint'), icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, controller: _emailController, theme: theme),
+                    _buildTextField(hint: appProvider.translate('email_hint'), icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, controller: _emailController, theme: theme),
                     const SizedBox(height: 16),
 
                     _buildLabel(appProvider.translate('password'), theme),
                     const SizedBox(height: 8),
-                    _buildTextField(hint: appProvider.translate('password.hint'), icon: Icons.lock_outline_rounded, obscure: true, controller: _passwordController, theme: theme),
+                    _buildTextField(hint: appProvider.translate('password_hint'), icon: Icons.lock_outline_rounded, obscure: true, controller: _passwordController, theme: theme),
                     const SizedBox(height: 16),
 
                     _buildLabel(appProvider.translate('phone'), theme),
                     const SizedBox(height: 8),
-                    _buildTextField(hint: appProvider.translate('phone.hint'), icon: Icons.phone_outlined, keyboardType: TextInputType.phone, controller: _phoneController, theme: theme),
+                    _buildTextField(hint: appProvider.translate('phone_hint'), icon: Icons.phone_outlined, keyboardType: TextInputType.phone, controller: _phoneController, theme: theme),
                     
                     if (_role == 0) ...[
                       const SizedBox(height: 16),
                       _buildLabel(appProvider.translate('university'), theme),
                       const SizedBox(height: 8),
-                      _buildTextField(hint: appProvider.translate('university.name'), icon: Icons.school_outlined, controller: _universityController, theme: theme),
+                      _buildTextField(hint: appProvider.translate('university_name'), icon: Icons.school_outlined, controller: _universityController, theme: theme),
                     ],
                     
                     const SizedBox(height: 32),
@@ -185,7 +185,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                         child: RichText(
                           text: TextSpan(
-                            text: appProvider.translate('already.have.account'),
+                            text: appProvider.translate('already_have_account'),
                             style: theme.textTheme.bodyMedium,
                             children: [
                               TextSpan(

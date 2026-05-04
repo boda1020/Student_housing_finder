@@ -11,7 +11,7 @@ class HelpCenterScreen extends StatelessWidget {
     final isArabic = appProvider.isArabic;
     
     return Scaffold(
-      appBar: AppBar(title: Text(appProvider.translate('help.center'))),
+      appBar: AppBar(title: Text(appProvider.translate('help_center'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -19,31 +19,31 @@ class HelpCenterScreen extends StatelessWidget {
             context,
             appProvider.translate('faq'),
             Icons.question_answer_outlined,
-            appProvider.translate('faq.desc'),
+            appProvider.translate('faq_desc'),
             isArabic,
           ),
           const SizedBox(height: 12),
           _buildHelpTile(
             context,
-            appProvider.translate('contact.support'),
+            appProvider.translate('contact_support'),
             Icons.support_agent_rounded,
-            appProvider.translate('contact.support.desc'),
+            appProvider.translate('contact_support_desc'),
             isArabic,
           ),
           const SizedBox(height: 12),
           _buildHelpTile(
             context,
-            appProvider.translate('privacy.policy'),
+            appProvider.translate('privacy_policy'),
             Icons.privacy_tip_outlined,
-            appProvider.translate('privacy.policy.desc'),
+            appProvider.translate('privacy_policy_desc'),
             isArabic,
           ),
           const SizedBox(height: 12),
           _buildHelpTile(
             context,
-            appProvider.translate('terms.service'),
+            appProvider.translate('terms_service'),
             Icons.description_outlined,
-            appProvider.translate('terms.service.desc'),
+            appProvider.translate('terms_service_desc'),
             isArabic,
           ),
         ],
@@ -57,14 +57,14 @@ class HelpCenterScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: theme.primaryColor.withOpacity(0.1),
+            color: theme.primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: theme.primaryColor, size: 24),

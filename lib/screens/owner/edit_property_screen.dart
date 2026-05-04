@@ -93,12 +93,12 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     switch (key) {
       case 'WiFi': return appProvider.translate('wifi');
       case 'Fridge': return appProvider.translate('fridge');
-      case 'Washing Machine': return appProvider.translate('washing.machine');
+      case 'Washing Machine': return appProvider.translate('washing_machine');
       case 'TV': return appProvider.translate('tv');
       case 'Kitchen': return appProvider.translate('kitchen');
       case 'AC': return appProvider.translate('ac');
-      case 'Water Heater': return appProvider.translate('water.heater');
-      case 'Study Desk': return appProvider.translate('study.desk');
+      case 'Water Heater': return appProvider.translate('water_heater');
+      case 'Study Desk': return appProvider.translate('study_desk');
       default: return key;
     }
   }
@@ -115,7 +115,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
   Future<void> _submitUpdate(AppProvider appProvider) async {
     if (!_formKey.currentState!.validate()) return;
     if (_existingImages.isEmpty && _newImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('at.least.one.image') ?? 'At least one image is required')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('at_least_one_image') ?? 'At least one image is required')));
       return;
     }
 
@@ -156,11 +156,11 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
       );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('property.updated') ?? 'Property updated successfully')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appProvider.translate('property_updated'))));
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${appProvider.translate('error') ?? 'Error'}: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${appProvider.translate('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -174,107 +174,110 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     final primaryColor = theme.primaryColor;
     final textColor = theme.textTheme.bodyLarge?.color ?? (isDark ? Colors.white : Colors.black);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(appProvider.translate('edit.property') ?? 'Edit Property'),
-        iconTheme: IconThemeData(color: isDark ? Colors.white : primaryColor),
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildImageSection(primaryColor, appProvider, isDark),
-                  const SizedBox(height: 24),
-                  _buildTextField(_titleController, appProvider.translate('property.title') ?? 'Property Title', Icons.title, appProvider, isDark),
-                  const SizedBox(height: 16),
-                  _buildTextField(_descriptionController, appProvider.translate('description') ?? 'Description', Icons.description, appProvider, isDark, maxLines: 3),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          _priceController,
-                          '${appProvider.translate('price') ?? 'Price'} (${appProvider.translate('currency')})',
-                          Icons.payments_rounded,
-                          appProvider,
-                          isDark,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return '';
-                            final n = double.tryParse(value);
-                            if (n == null || n <= 0) return '';
-                            return null;
-                          },
+    return Directionality(
+      textDirection: appProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(appProvider.translate('edit_property')),
+          iconTheme: IconThemeData(color: isDark ? Colors.white : primaryColor),
+        ),
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildImageSection(primaryColor, appProvider, isDark),
+                    const SizedBox(height: 24),
+                    _buildTextField(_titleController, appProvider.translate('property_title'), Icons.title, appProvider, isDark),
+                    const SizedBox(height: 16),
+                    _buildTextField(_descriptionController, appProvider.translate('description'), Icons.description, appProvider, isDark, maxLines: 3),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            _priceController,
+                            '${appProvider.translate('price')} (${appProvider.translate('currency')})',
+                            Icons.payments_rounded,
+                            appProvider,
+                            isDark,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return '';
+                              final n = double.tryParse(value);
+                              if (n == null || n <= 0) return '';
+                              return null;
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField(
-                          _roomsController,
-                          appProvider.translate('rooms') ?? 'Rooms',
-                          Icons.bed_rounded,
-                          appProvider,
-                          isDark,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return '';
-                            final n = int.tryParse(value);
-                            if (n == null || n <= 0) return '';
-                            return null;
-                          },
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            _roomsController,
+                            appProvider.translate('rooms'),
+                            Icons.bed_rounded,
+                            appProvider,
+                            isDark,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return '';
+                              final n = int.tryParse(value);
+                              if (n == null || n <= 0) return '';
+                              return null;
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(_locationController, appProvider.translate('location') ?? 'Location', Icons.location_on, appProvider, isDark),
-                  const SizedBox(height: 24),
-                  
-                  Text(appProvider.translate('furnishing') ?? 'Furnishing Status', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _choiceChip(appProvider.translate('unfurnished') ?? 'Unfurnished', !_isFurnished, () => setState(() => _isFurnished = false), primaryColor, theme, isDark)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _choiceChip(appProvider.translate('furnished') ?? 'Furnished', _isFurnished, () => setState(() => _isFurnished = true), primaryColor, theme, isDark)),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  Text(appProvider.translate('amenities.features') ?? 'Amenities & Features', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                  const SizedBox(height: 12),
-                  _buildAmenitiesGrid(primaryColor, theme, appProvider, isDark),
-                  
-                  const SizedBox(height: 24),
-                  _buildTextField(_bedsController, appProvider.translate('beds.count') ?? 'Beds Count', Icons.king_bed_rounded, appProvider, isDark, keyboardType: TextInputType.number),
-                  
-                  const SizedBox(height: 16),
-                  Text(appProvider.translate('other.features') ?? 'Other Features', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                  const SizedBox(height: 12),
-                  _buildFeatureSwitches(appProvider, primaryColor, theme, isDark),
-                  
-                  const SizedBox(height: 16),
-                  _buildTextField(_otherAmenityController, appProvider.translate('other') ?? 'Other', Icons.add_circle_outline_rounded, appProvider, isDark),
-                  
-                  const SizedBox(height: 24),
-                  _buildAvailabilityToggle(appProvider, primaryColor, theme, isDark),
-                  
-                  const SizedBox(height: 32),
-                  _buildUpdateButtonStyle(primaryColor, appProvider),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(_locationController, appProvider.translate('location'), Icons.location_on, appProvider, isDark),
+                    const SizedBox(height: 24),
+                    
+                    Text(appProvider.translate('furnishing'), style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _choiceChip(appProvider.translate('unfurnished'), !_isFurnished, () => setState(() => _isFurnished = false), primaryColor, theme, isDark)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _choiceChip(appProvider.translate('furnished'), _isFurnished, () => setState(() => _isFurnished = true), primaryColor, theme, isDark)),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    Text(appProvider.translate('amenities_features'), style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                    const SizedBox(height: 12),
+                    _buildAmenitiesGrid(primaryColor, theme, appProvider, isDark),
+                    
+                    const SizedBox(height: 24),
+                    _buildTextField(_bedsController, appProvider.translate('beds_count'), Icons.king_bed_rounded, appProvider, isDark, keyboardType: TextInputType.number),
+                    
+                    const SizedBox(height: 16),
+                    Text(appProvider.translate('other_features'), style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                    const SizedBox(height: 12),
+                    _buildFeatureSwitches(appProvider, primaryColor, theme, isDark),
+                    
+                    const SizedBox(height: 16),
+                    _buildTextField(_otherAmenityController, appProvider.translate('other'), Icons.add_circle_outline_rounded, appProvider, isDark),
+                    
+                    const SizedBox(height: 24),
+                    _buildAvailabilityToggle(appProvider, primaryColor, theme, isDark),
+                    
+                    const SizedBox(height: 32),
+                    _buildUpdateButtonStyle(primaryColor, appProvider),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (_isLoading) Container(
-            color: Colors.black26,
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-        ],
+            if (_isLoading) Container(
+              color: Colors.black26,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -284,7 +287,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
       children: [
         Expanded(
           child: _featureToggle(
-            appProvider.translate('reception') ?? 'Reception',
+            appProvider.translate('reception'),
             _hasReception,
             (val) => setState(() => _hasReception = val),
             primaryColor, theme, isDark,
@@ -293,7 +296,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: _featureToggle(
-            appProvider.translate('salon') ?? 'Salon',
+            appProvider.translate('salon'),
             _hasSalon,
             (val) => setState(() => _hasSalon = val),
             primaryColor, theme, isDark,
@@ -309,9 +312,9 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: value ? primaryColor.withOpacity(0.1) : (isDark ? const Color(0xFF1E2530) : theme.cardTheme.color),
+          color: value ? primaryColor.withValues(alpha: 0.1) : (isDark ? const Color(0xFF1E2530) : theme.cardTheme.color),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: value ? primaryColor : Colors.grey.withOpacity(0.1)),
+          border: Border.all(color: value ? primaryColor : Colors.grey.withValues(alpha: 0.1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -348,13 +351,13 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  appProvider.translate('property.status') ?? 'Property Status',
+                  appProvider.translate('property_status'),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   _isAvailable 
-                    ? (appProvider.translate('available.for.rent') ?? 'Available for Rent')
-                    : (appProvider.translate('rented.closed') ?? 'Rented/Closed'),
+                    ? appProvider.translate('available_for_rent')
+                    : appProvider.translate('rented_closed'),
                   style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[600], fontSize: 12),
                 ),
               ],
@@ -363,10 +366,10 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
           Switch(
             value: _isAvailable,
             onChanged: (val) => setState(() => _isAvailable = val),
-            activeColor: Colors.green,
-            activeTrackColor: Colors.green.withOpacity(0.3),
+            activeThumbColor: Colors.green,
+            activeTrackColor: Colors.green.withValues(alpha: 0.3),
             inactiveThumbColor: Colors.red,
-            inactiveTrackColor: Colors.red.withOpacity(0.3),
+            inactiveTrackColor: Colors.red.withValues(alpha: 0.3),
           ),
         ],
       ),
@@ -377,7 +380,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(appProvider.translate('images') ?? 'Images', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(appProvider.translate('images'), style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         SizedBox(
           height: 100,
@@ -391,9 +394,9 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
                 child: Container(
                   width: 100,
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1), 
+                    color: primaryColor.withValues(alpha: 0.1), 
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: primaryColor.withOpacity(0.2), style: BorderStyle.solid)
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.2), style: BorderStyle.solid)
                   ),
                   child: Icon(Icons.add_a_photo, color: primaryColor),
                 ),
@@ -425,8 +428,11 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
           child: GestureDetector(
             onTap: () {
               setState(() {
-                if (isUrl) _existingImages.remove(source);
-                else _newImages.remove(source);
+                if (isUrl) {
+                  _existingImages.remove(source);
+                } else {
+                  _newImages.remove(source);
+                }
               });
             },
             child: Container(
@@ -464,7 +470,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
       ),
       validator: validator ??
           (v) =>
-              v!.isEmpty ? (appProvider.translate('required') ?? 'Required') : null,
+              v!.isEmpty ? appProvider.translate('required') : null,
     );
   }
 
@@ -480,7 +486,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
           elevation: 0,
         ),
         child: Text(
-          appProvider.translate('update.data') ?? 'Update Data', 
+          appProvider.translate('update_data'),
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
         ),
       ),
@@ -495,7 +501,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         decoration: BoxDecoration(
           color: selected ? primaryColor : (isDark ? const Color(0xFF1E2530) : theme.cardTheme.color),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? primaryColor : Colors.grey.withOpacity(0.1)),
+          border: Border.all(color: selected ? primaryColor : Colors.grey.withValues(alpha: 0.1)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -525,7 +531,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
             decoration: BoxDecoration(
               color: isSelected ? primaryColor : (isDark ? const Color(0xFF1E2530) : theme.cardTheme.color), 
               borderRadius: BorderRadius.circular(12), 
-              border: Border.all(color: isSelected ? primaryColor : Colors.grey.withOpacity(0.1))
+              border: Border.all(color: isSelected ? primaryColor : Colors.grey.withValues(alpha: 0.1))
             ),
             child: Row(children: [
               Icon(_amenityIcons[key], color: isSelected ? Colors.white : primaryColor, size: 16),

@@ -69,7 +69,7 @@ class ChatService {
               'partner_name': partner['full_name'],
               'partner_avatar': partner['avatar_url'],
               'property_title': property['title'],
-              'last_message': lastMsgData.isNotEmpty ? lastMsgData[0]['content'] : 'No messages yet',
+              'last_message': lastMsgData.isNotEmpty ? lastMsgData[0]['content'] : (chat['property_id'] != null ? 'Inquiry about property' : 'No messages yet'),
               'last_message_time': lastMsgData.isNotEmpty ? lastMsgData[0]['created_at'] : chat['created_at'],
             });
           }
@@ -101,8 +101,8 @@ class ChatService {
     try {
       await _supabase.from('notifications').insert({
         'user_id': receiverId,
-        'title': 'New Message from $myName',
-        'body': content.length > 50 ? '${content.substring(0, 50)}...' : content,
+        'title': 'new_message_notification',
+        'body': '$myName: ${content.length > 50 ? '${content.substring(0, 50)}...' : content}',
         'type': 'chat',
         'data': chatId,
         'is_read': false,

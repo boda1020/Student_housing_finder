@@ -9,40 +9,44 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
     final isDark = appProvider.isDarkMode;
-    final isArabic = appProvider.isArabic;
+    final isAr = appProvider.isArabic;
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(appProvider.translate('settings')),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildSettingTile(
-            context,
-            title: appProvider.translate('language'),
-            subtitle: isArabic ? appProvider.translate('arabic') : appProvider.translate('english'),
-            icon: Icons.language_rounded,
-            trailing: Switch(
-              value: isArabic,
-              onChanged: (value) => appProvider.toggleLanguage(),
-              activeColor: theme.primaryColor,
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(appProvider.translate('settings'), style: const TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _buildSettingTile(
+              context,
+              title: appProvider.translate('language'),
+              subtitle: isAr ? appProvider.translate('arabic') : appProvider.translate('english'),
+              icon: Icons.language_rounded,
+              trailing: Switch(
+                value: isAr,
+                onChanged: (value) => appProvider.toggleLanguage(),
+                activeColor: theme.primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _buildSettingTile(
-            context,
-            title: appProvider.translate('dark.mode'),
-            subtitle: isDark ? appProvider.translate('enabled') : appProvider.translate('disabled'),
-            icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-            trailing: Switch(
-              value: isDark,
-              onChanged: (value) => appProvider.toggleTheme(),
-              activeColor: theme.primaryColor,
+            const SizedBox(height: 16),
+            _buildSettingTile(
+              context,
+              title: appProvider.translate('dark_mode'),
+              subtitle: isDark ? appProvider.translate('enabled') : appProvider.translate('disabled'),
+              icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              trailing: Switch(
+                value: isDark,
+                onChanged: (value) => appProvider.toggleTheme(),
+                activeColor: theme.primaryColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

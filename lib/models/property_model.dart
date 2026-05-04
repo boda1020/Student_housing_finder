@@ -10,8 +10,8 @@ class Property {
   final String propertyType;
   final int views;
   final int rooms;
-  final int bedsCount;          // عدد الأسرة
-  final bool isFurnished;       // هل العقار مفروش؟
+  final int bedsCount;
+  final bool isFurnished;
   final bool hasReception;
   final bool hasSalon;
   final bool isAvailable;
@@ -65,9 +65,9 @@ class Property {
       ownerId: json['owner_id'] ?? '',
       propertyType: json['property_type'] ?? 'apartment',
       amenities: List<String>.from(json['amenities'] ?? []),
-      views: json['views'] ?? 0,
-      rooms: json['rooms'] ?? 1,
-      bedsCount: json['beds_count'] ?? 1,
+      views: (json['views'] ?? 0) as int,
+      rooms: (json['rooms'] ?? 1) as int,
+      bedsCount: (json['beds_count'] ?? 1) as int,
       isFurnished: json['is_furnished'] ?? false,
       hasReception: json['has_reception'] ?? false,
       hasSalon: json['has_salon'] ?? false,
@@ -78,5 +78,27 @@ class Property {
       ownerPhone: phone,
       ownerAvatar: avatar,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'price': price,
+      'images': images,
+      'location': location,
+      'owner_id': ownerId,
+      'amenities': amenities,
+      'property_type': propertyType,
+      'views': views,
+      'rooms': rooms,
+      'beds_count': bedsCount,
+      'is_furnished': isFurnished,
+      'has_reception': hasReception,
+      'has_salon': hasSalon,
+      'is_available': isAvailable,
+      'is_verified': isVerified,
+    };
   }
 }

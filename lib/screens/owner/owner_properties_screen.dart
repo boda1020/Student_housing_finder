@@ -37,7 +37,7 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
       if (mounted) {
         final appProvider = Provider.of<AppProvider>(context, listen: false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${appProvider.translate('error.loading.properties')}$e')),
+          SnackBar(content: Text('${appProvider.translate('error_loading_properties')}: $e')),
         );
         setState(() => _isLoading = false);
       }
@@ -49,8 +49,8 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(appProvider.translate('delete.property.title')),
-        content: Text(appProvider.translate('delete.property.confirm')),
+        title: Text(appProvider.translate('delete_property_title')),
+        content: Text(appProvider.translate('delete_property_confirm')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(appProvider.translate('cancel'))),
           TextButton(
@@ -65,10 +65,15 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
       try {
         await _propertyService.deleteProperty(id);
         _fetchProperties();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(appProvider.translate('deleted_success')))
+          );
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${appProvider.translate('error.deleting')}$e'))
+            SnackBar(content: Text('${appProvider.translate('error_deleting')}$e'))
           );
         }
       }
@@ -82,22 +87,25 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(appProvider.translate('my.properties.title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(appProvider.translate('my_properties_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchProperties,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _properties.isEmpty
-                ? Center(child: Text(appProvider.translate('no.properties.listed')))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _properties.length,
-                    itemBuilder: (context, index) {
-                      final property = _properties[index];
-                      return _buildPropertyCard(property, isAr, appProvider);
-                    },
-                  ),
+      body: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: RefreshIndicator(
+          onRefresh: _fetchProperties,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _properties.isEmpty
+                  ? Center(child: Text(appProvider.translate('no_properties_listed')))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _properties.length,
+                      itemBuilder: (context, index) {
+                        final property = _properties[index];
+                        return _buildPropertyCard(property, isAr, appProvider);
+                      },
+                    ),
+        ),
       ),
     );
   }
@@ -106,13 +114,21 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
     final images = property['images'] as List?;
     final imageUrl = (images != null && images.isNotEmpty) ? images[0] : null;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1)),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,39 +138,37 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                child: imageUrl != null
-                    ? Image.network(
-                        imageUrl,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            height: 200,
-                            width: double.infinity,
-                            color: Colors.grey[200],
-                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 200,
-                          width: double.infinity,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey),
-                        ),
-                      )
-                    : Container(height: 200, color: Colors.grey[200], child: const Icon(Icons.image, size: 50, color: Colors.grey)),
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  color: isDark ? const Color(0xFF252932) : Colors.grey[100],
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                          },
+                          errorBuilder: (context, error, stackTrace) => 
+                            Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey.withOpacity(0.5)),
+                        )
+                      : Icon(Icons.image_outlined, size: 50, color: Colors.grey.withOpacity(0.5)),
+                ),
               ),
               PositionedDirectional(
                 top: 12,
                 end: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.star, color: Colors.orange, size: 14),
+                      Icon(Icons.star_rounded, color: Colors.orange, size: 16),
                       SizedBox(width: 4),
                       Text('4.8', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     ],

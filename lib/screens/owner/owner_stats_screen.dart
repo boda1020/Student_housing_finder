@@ -55,18 +55,18 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
             child: Column(
               children: [
                 _buildStatCard(
-                  appProvider.translate('total.views'),
+                  appProvider.translate('total_views_stat'),
                   '$totalViews',
                   Icons.visibility_rounded,
                   Colors.orange,
-                  appProvider.translate('30days'),
+                  appProvider.translate('last_30_days'),
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: _buildStatCard(
-                        appProvider.translate('my.properties'),
+                        appProvider.translate('my_properties_stat'),
                         '${properties.length}',
                         Icons.home_work_rounded,
                         Colors.blue,
@@ -76,7 +76,7 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildStatCard(
-                        appProvider.translate('monthly.price'),
+                        appProvider.translate('avg_price'),
                         '${avgPrice.toStringAsFixed(0)} ${appProvider.translate('currency')}',
                         Icons.payments_rounded,
                         Colors.purple,
@@ -102,10 +102,10 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
-        boxShadow: [
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : theme.dividerColor.withValues(alpha: 0.1)),
+        boxShadow: isDark ? [] : [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 5),
           )
@@ -120,7 +120,7 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),

@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin(AppProvider appProvider) async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(appProvider.translate('enter.email.pass'))),
+        SnackBar(content: Text(appProvider.translate('enter_email_pass'))),
       );
       return;
     }
@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${appProvider.translate('login.failed')}: ${e.toString()}')),
+          SnackBar(content: Text('${appProvider.translate('login_failed')}: ${e.toString()}')),
         );
       }
     } finally {
@@ -73,6 +73,24 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            TextButton(
+              onPressed: () => appProvider.toggleLanguage(),
+              child: Text(
+                isAr ? 'English' : 'العربية',
+                style: TextStyle(
+                  color: theme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ),
         body: _isLoading 
           ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
           : Container(
@@ -114,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            appProvider.translate('app.title'),
+                            appProvider.translate('app_title'),
                             style: theme.textTheme.headlineMedium?.copyWith(
                               color: theme.primaryColor,
                               fontWeight: FontWeight.bold,
@@ -134,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      appProvider.translate('login.subtitle'),
+                      appProvider.translate('login_subtitle'),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.textTheme.bodySmall?.color,
                       ),
@@ -145,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _buildLabel(appProvider.translate('email'), theme),
                     const SizedBox(height: 8),
                     _buildTextField(
-                      hint: appProvider.translate('email.hint'),
+                      hint: appProvider.translate('email_hint'),
                       icon: Icons.email_outlined,
                       controller: _emailController,
                       theme: theme,
@@ -155,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _buildLabel(appProvider.translate('password'), theme),
                     const SizedBox(height: 8),
                     _buildTextField(
-                      hint: appProvider.translate('password.hint'),
+                      hint: appProvider.translate('password_hint'),
                       icon: Icons.lock_outline_rounded,
                       obscure: true,
                       controller: _passwordController,
@@ -173,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: Text(
-                          appProvider.translate('forgot.password'),
+                          appProvider.translate('forgot_password'),
                           style: TextStyle(
                             color: theme.primaryColor,
                             fontWeight: FontWeight.w600,
@@ -204,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: RichText(
                           text: TextSpan(
-                            text: appProvider.translate('dont.have.account'),
+                            text: appProvider.translate('dont_have_account'),
                             style: theme.textTheme.bodyMedium,
                             children: [
                               TextSpan(
