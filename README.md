@@ -1,255 +1,107 @@
 # Student Housing Finder 🏠📱
 
-![Flutter](https://img.shields.io/badge/Flutter-Framework-blue?logo=flutter)
-![Dart](https://img.shields.io/badge/Dart-Language-blue?logo=dart)
-![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-green)
-![Status](https://img.shields.io/badge/Project-UI%20Prototype-orange)
+[![Flutter](https://img.shields.io/badge/Flutter-Framework-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-Language-0175C2?logo=dart&logoColor=white)](https://dart.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-34A853?logo=android&logoColor=white)](https://www.android.com)
 
-A modern **Flutter mobile application** that helps students find suitable housing near universities and allows property owners to list their available properties.
-
-This project demonstrates **clean UI architecture, modular Flutter structure, cross-platform mobile development, and Supabase backend integration**.
+A premium **Flutter mobile application** designed to bridge the gap between students seeking accommodation and property owners. It provides a seamless, localized, and real-time experience for finding the perfect home near campus.
 
 ---
 
-# 📌 Project Description
+## 📌 Project Overview
 
-Finding accommodation near universities can be difficult for students.  
-The **Student Housing Finder** application simplifies this process by providing a centralized platform where students can explore available housing and connect with property owners.
+**Student Housing Finder** is built to solve the struggle of finding reliable student housing. The app offers a dual-interface experience tailored for both students and owners, integrated with a robust Supabase backend for real-time data management.
 
-The project focuses on building a **clean, scalable, and well-structured Flutter UI application** with full backend integration using Supabase.
-
----
-
-# ✨ Features
-
-### 👨‍🎓 Student Features
-* Browse student housing listings
-* View property details
-* Save favorite properties
-* Filter housing options
-* Contact property owners
-* Manage personal profile
-
-### 🏠 Owner Features
-* Add new properties
-* Edit property listings
-* Manage available properties
-* View property status
-
-### 💬 Communication
-* Chat interface between students and property owners
-* Real-time updates using Supabase Realtime
-
-### 🎨 UI/UX Experience
-* Clean modern interface
-* Reusable UI components
-* Organized navigation
-* Light and dark themes
-* Error handling and loading states for async operations
+### Key Highlights:
+- **Clean Architecture:** Modular and scalable code structure.
+- **Multilingual Support:** Full Arabic and English localization.
+- **Real-time Interaction:** Instant messaging and notifications.
+- **Modern UI:** Sleek, responsive design with Dark/Light mode support.
 
 ---
 
-# 🏗 Project Architecture
+## ✨ Core Features
 
-The project follows a **clean modular Flutter architecture** using Providers, Repositories, and Services.
+### 👨‍🎓 For Students
+- **Smart Discovery:** Browse and filter listings by location, price, and amenities.
+- **Detailed Insights:** Comprehensive property views with image sliders and feature lists.
+- **Favorites:** Save preferred listings for quick access.
+- **Direct Connect:** Chat directly with owners and receive instant notifications.
+
+### 🏠 For Property Owners
+- **Listing Management:** Add, edit, and manage property status (Available/Rented).
+- **Dashboard:** Overview of active listings and views.
+- **Engagement:** Real-time chat with interested students.
+
+### ⚙️ System Features
+- **Localization:** Seamless toggle between Arabic and English.
+- **Theming:** Dynamic Light and Dark mode.
+- **Authentication:** Secure sign-up/login with role selection (Student/Owner).
+- **Push Notifications:** Stay updated on messages and property status.
+
+---
+
+## 🏗 Project Structure
 
 ```text
-student_housing_finder/
-│
-├── lib/
-│   ├── core/
-│   │   ├── constants/
-│   │   │   ├── app_colors.dart
-│   │   │   ├── app_strings.dart
-│   │   │   └── app_assets.dart
-│   │   ├── routing/
-│   │   │   └── app_routes.dart
-│   │   ├── theme/
-│   │   │   ├── light_theme.dart
-│   │   │   └── dark_theme.dart
-│   │   └── utils/
-│   │       ├── validators.dart
-│   │       └── supabase_client.dart
-│   ├── data/
-│   │   ├── services/
-│   │   │   ├── auth_service.dart
-│   │   │   ├── property_service.dart
-│   │   │   ├── favorite_service.dart
-│   │   │   └── chat_service.dart
-│   │   └── repositories/
-│   │       ├── auth_repository.dart
-│   │       ├── property_repository.dart
-│   │       ├── favorite_repository.dart
-│   │       └── chat_repository.dart
-│   ├── models/
-│   │   ├── user_model.dart
-│   │   ├── property_model.dart
-│   │   ├── favorite_model.dart
-│   │   └── message_model.dart
-│   ├── providers/
-│   │   ├── auth_provider.dart
-│   │   ├── property_provider.dart
-│   │   ├── favorite_provider.dart
-│   │   ├── chat_provider.dart
-│   │   └── theme_provider.dart
-│   ├── screens/
-│   │   ├── splash/
-│   │   │   └── splash_screen.dart
-│   │   ├── onboarding/
-│   │   │   └── onboarding_screen.dart
-│   │   ├── auth/
-│   │   │   ├── login_screen.dart
-│   │   │   └── register_screen.dart
-│   │   ├── student/
-│   │   │   ├── student_home_screen.dart
-│   │   │   ├── property_details_screen.dart
-│   │   │   ├── favorites_screen.dart
-│   │   │   └── student_profile_screen.dart
-│   │   ├── owner/
-│   │   │   ├── owner_dashboard_screen.dart
-│   │   │   ├── add_property_screen.dart
-│   │   │   ├── edit_property_screen.dart
-│   │   │   └── owner_profile_screen.dart
-│   │   ├── chat/
-│   │   │   ├── chat_list_screen.dart
-│   │   │   └── chat_screen.dart
-│   │   └── common/
-│   │       └── filter_screen.dart
-│   ├── widgets/
-│   │   ├── common/
-│   │   │   ├── custom_button.dart
-│   │   │   ├── custom_text_field.dart
-│   │   │   └── custom_app_bar.dart
-│   │   ├── property/
-│   │   │   ├── property_card.dart
-│   │   │   ├── property_slider.dart
-│   │   │   └── property_info_section.dart
-│   │   └── owner/
-│   │       └── owner_property_card.dart
-│   ├── main.dart
-│   └── app.dart
-├── assets/
-│   ├── images/
-│   └── icons/
-├── pubspec.yaml
-└── README.md
+lib/
+├── core/
+│   ├── theme/          # Light & Dark theme definitions
+│   └── utils/          # App constants, localization keys, and helpers
+├── data/
+│   └── services/       # Supabase integration (Auth, Chat, Property, Notifications)
+├── models/             # Data models (User, Property, Message, etc.)
+├── providers/          # State management (App, Auth, Property providers)
+├── screens/
+│   ├── auth/           # Login, Register, Forgot Password
+│   ├── home/           # Student Home & Owner Dashboard
+│   ├── chat/           # Conversation list and Chat screen
+│   ├── notifications/  # User notifications center
+│   ├── property/       # Details and listing views
+│   └── splash/         # Initializing screen
+├── widgets/            # Reusable UI components (Buttons, Cards, Inputs)
+├── app.dart            # Root widget & routing configuration
+└── main.dart           # Application entry point
 ```
 
 ---
 
-# 📱 Application Screens
+## 🚀 Getting Started
 
-## Splash Screen
-Displays the application logo while initializing the app.
+### Prerequisites
+- Flutter SDK (latest version recommended)
+- Supabase Account & Project
 
-## Onboarding Screen
-Introduces users to the main features of the application.
-
-## Login Screen
-Allows users to sign in using their credentials.
-
-## Register Screen
-Allows new users to create accounts and select their role (Student or Owner).
-
----
-
-# 👨‍🎓 Student Interface
-
-## Student Home Screen
-Main dashboard displaying property listings.
-
-## Property Details Screen
-Shows detailed information about selected properties.
-
-## Favorites Screen
-Displays all saved properties.
-
-## Student Profile Screen
-Allows users to manage their personal profile.
+### Installation
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/your-username/student_housing_finder.git
+   ```
+2. **Install dependencies:**
+   ```bash
+   flutter pub get
+   ```
+3. **Setup Environment:**
+   Create a configuration for your Supabase URL and Anon Key in the initialization logic.
+4. **Run the app:**
+   ```bash
+   flutter run
+   ```
 
 ---
 
-# 🏠 Owner Interface
-
-## Owner Dashboard
-Displays all properties listed by the owner.
-
-## Add Property Screen
-Allows owners to add new housing listings.
-
-## Edit Property Screen
-Allows editing of existing listings.
-
-## Owner Profile Screen
-Displays owner account information.
+## 🎯 Educational Goals
+This project serves as a showcase for:
+- Implementing **Provider** for state management.
+- Integrating **Supabase** (Auth, Database, Storage, and Realtime).
+- Building a **Localized UI** with RTL support.
+- Following **Clean Code** principles and modular design.
 
 ---
 
-# 💬 Chat System
-
-## Chat List Screen
-Shows all conversations.
-
-## Chat Screen
-Allows messaging between students and property owners.
+## 📄 License
+This project is developed for educational and portfolio purposes.
 
 ---
-
-# 🎨 Reusable Widgets
-
-* Custom buttons
-* Property cards
-* Input fields
-* Image sliders
-* Property information sections
-
----
-
-# 🚀 Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/your-username/student_housing_finder.git
-```
-
-Install dependencies:
-
-```id="3w4do0"
-flutter pub get
-```
-
-Run the project:
-
-```id="32qkbe"
-flutter run
-```
-
----
-
-# 🎯 Project Objective
-
-This project demonstrates:
-
-- Cross-platform mobile development with Flutter
-- Clean project architecture with Providers, Repositories, and Services
-- Reusable UI component design
-- Integration with Supabase backend (Auth, Database, Storage, Realtime)
-- Mobile UI/UX implementation with Error & Loading states
-
----
-
-# 📚 Educational Purpose
-
-This project was developed as part of a mobile application development learning project to practice:
-
-- Flutter architecture
-- State management with Providers
-- UI/UX design
-- Supabase integration
-
----
-
-# 📄 License
-
-This project is intended for educational purposes only.
+*Developed with ❤️ for Students and Developers.*
