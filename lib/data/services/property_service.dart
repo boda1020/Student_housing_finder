@@ -121,35 +121,15 @@ class PropertyService {
   Future<void> deleteProperty(String id) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not logged in');
-    
     final dynamic queryId = int.tryParse(id) ?? id;
-    
-    // We no longer need manual cleanup here because we enabled ON DELETE CASCADE in the database.
-    // Deleting the property will automatically delete related chats, messages, favorites, and notifications.
-    final response = await _supabase.from('properties').delete().eq('id', queryId).eq('owner_id', user.id).select();
-
-    if (response.isEmpty) {
-      throw Exception('Property not found or you are not the owner');
-    }
+    await _supabase.from('properties').delete().eq('id', queryId).eq('owner_id', user.id);
   }
 
   Future<void> incrementViews(String id) async {
     try {
-      final dynamic queryId = int.tryParse(id) ?? id;
-      
-      final data = await _supabase
-          .from('properties')
-          .select('views')
-          .eq('id', queryId)
-          .maybeSingle();
-      
-      if (data != null) {
-        int currentViews = (data['views'] as int? ?? 0);
-        await _supabase
-            .from('properties')
-            .update({'views': currentViews + 1})
-            .eq('id', queryId);
-      }
+      // استخدام الـ RPC الجديد لتخطي قيود الـ RLS وضمان تحديث العداد
+      await _supabase.rpc('increment_property_views', params: {'prop_id': id.toString()});
+      debugPrint('View incremented for: $id');
     } catch (e) {
       debugPrint('Error incrementing views: $e');
     }
@@ -165,27 +145,64 @@ class PropertyService {
     final user = _supabase.auth.currentUser;
     if (user == null) return false;
 
-    final existing = await _supabase.from('favorites').select().eq('user_id', user.id).eq('property_id', propertyId).limit(1);
+    try {
+      // البحث عن السجل الموجود
+      final existing = await _supabase
+          .from('favorites')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('property_id', propertyId)
+          .maybeSingle();
 
-    if (existing.isNotEmpty) {
-      await _supabase.from('favorites').delete().eq('user_id', user.id).eq('property_id', propertyId);
-      return false; 
-    } else {
-      await _supabase.from('favorites').insert({'user_id': user.id, 'property_id': propertyId});
-      return true;
+      if (existing != null) {
+        // حذف باستخدام الـ ID بتاع السجل نفسه لضمان الدقة
+        await _supabase
+            .from('favorites')
+            .delete()
+            .eq('id', existing['id']);
+        return false; // تم الحذف
+      } else {
+        // إضافة سجل جديد
+        await _supabase.from('favorites').insert({
+          'user_id': user.id, 
+          'property_id': propertyId
+        });
+        return true; // تم الإضافة
+      }
+    } catch (e) {
+      debugPrint('Error toggling favorite: $e');
+      return false;
     }
   }
 
   Future<bool> isFavorite(String propertyId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return false;
-    final existing = await _supabase.from('favorites').select().eq('user_id', user.id).eq('property_id', propertyId).limit(1);
-    return existing.isNotEmpty;
+    final existing = await _supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('property_id', propertyId)
+        .maybeSingle();
+    return existing != null;
   }
 
-  Future<List<dynamic>> getFavorites() async {
+  Future<List<Map<String, dynamic>>> getFavorites() async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return [];
-    return await _supabase.from('favorites').select('*, properties(*, profiles(full_name, phone, avatar_url))').eq('user_id', user.id);
+    if (user == null) return <Map<String, dynamic>>[];
+    final data = await _supabase.from('favorites').select('*, properties(*, profiles(full_name, phone, avatar_url))').eq('user_id', user.id);
+    return List<Map<String, dynamic>>.from(data as List);
+  }
+
+  Stream<List<Map<String, dynamic>>> getFavoritesStream() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return Stream.value([]);
+    return _supabase.from('favorites').stream(primaryKey: ['id']).eq('user_id', user.id).asyncMap((event) async => await getFavorites());
+  }
+
+  Stream<List<Map<String, dynamic>>> getOwnerPropertiesStream() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return Stream.value([]);
+    return _supabase.from('properties').stream(primaryKey: ['id']).eq('owner_id', user.id).order('created_at', ascending: false);
   }
 }

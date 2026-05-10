@@ -13,6 +13,7 @@ import '../chat/chat_list_screen.dart';
 import '../profile/profile_screen.dart';
 import '../auth/login_screen.dart';
 import '../../data/services/property_service.dart';
+import '../../data/services/chat_service.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -52,59 +53,87 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   }
 
   Widget _buildDrawer(AppProvider appProvider, ThemeData theme) {
-    final isArabic = appProvider.isArabic;
-    final isDark = appProvider.isDarkMode;
     final user = supabase.auth.currentUser;
-
     return Drawer(
+      backgroundColor: const Color(0xFF1A1C20),
       child: Column(
         children: [
+          // Header matching screenshot: Blue background with Profile Info
           StreamBuilder<Map<String, dynamic>>(
             stream: supabase.from('profiles').stream(primaryKey: ['id']).eq('id', user?.id ?? '').map((l) => l.isNotEmpty ? l.first : {}),
             builder: (context, snapshot) {
-              final name = snapshot.data?['full_name'] ?? appProvider.translate('user');
+              final name = snapshot.data?['full_name'] ?? "User";
               final avatarUrl = snapshot.data?['avatar_url'];
-              
-              return DrawerHeader(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)]),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                        child: (avatarUrl == null || avatarUrl.isEmpty)
-                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 60, bottom: 30),
+                color: const Color(0xFF5C61F2),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.white24,
+                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                      child: (avatarUrl == null || avatarUrl.isEmpty)
+                          ? const Icon(Icons.person, size: 45, color: Colors.white)
                           : null,
+                    ),
+                    const SizedBox(height: 15),
+                    const Text(
+                      "BODA",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
                       ),
-                      const SizedBox(height: 12),
-                      Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                      Text(appProvider.translate('property_owner_role'), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
-            }
+            },
           ),
+          const SizedBox(height: 10),
+          // Language Toggle
           ListTile(
-            leading: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: theme.primaryColor),
-            title: Text(isDark ? appProvider.translate('light_mode') : appProvider.translate('dark_mode')),
-            trailing: Switch(value: isDark, onChanged: (value) => appProvider.toggleTheme(), activeColor: theme.primaryColor),
-          ),
-          ListTile(
-            leading: Icon(Icons.translate_rounded, color: theme.primaryColor),
-            title: Text(isArabic ? appProvider.translate('english') : appProvider.translate('arabic')),
+            leading: const Icon(Icons.translate, color: Color(0xFF5C61F2)),
+            title: Text(
+              appProvider.isArabic ? "English" : "العربية",
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
             onTap: () => appProvider.toggleLanguage(),
           ),
+          // Theme Toggle
+          ListTile(
+            leading: Icon(
+              appProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: const Color(0xFF5C61F2),
+            ),
+            title: Text(
+              appProvider.isArabic
+                  ? (appProvider.isDarkMode ? "الوضع الفاتح" : "الوضع الداكن")
+                  : (appProvider.isDarkMode ? "Light Mode" : "Dark Mode"),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            trailing: Switch(
+              value: appProvider.isDarkMode,
+              onChanged: (val) => appProvider.toggleTheme(),
+              activeColor: const Color(0xFF5C61F2),
+            ),
+          ),
           const Spacer(),
-          const Divider(),
+          const Divider(color: Colors.white10),
+          // Logout at the bottom
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            title: Text(appProvider.translate('logout'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            title: Text(
+              appProvider.translate('logout') ?? "Logout",
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+            ),
             onTap: () async {
               await supabase.auth.signOut();
               if (mounted) {
@@ -123,9 +152,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
 
   Widget _buildHomeBody(AppProvider appProvider, ThemeData theme) {
     final userId = supabase.auth.currentUser?.id ?? '';
+    final propertyService = PropertyService();
 
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: supabase.from('properties').stream(primaryKey: ['id']).eq('owner_id', userId).order('created_at', ascending: false),
+      stream: propertyService.getOwnerPropertiesStream(),
       builder: (context, snapshot) {
         final myProperties = snapshot.data ?? [];
         int totalViews = 0;
@@ -133,8 +163,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           totalViews += (p['views'] ?? 0) as int;
         }
 
-        return CustomScrollView(
-          slivers: [
+        return RefreshIndicator(
+          onRefresh: () async {
+            // بما أننا نستخدم Stream، الـ RefreshIndicator سيعطي إيحاء بصري للمستخدم
+            // ويمكننا إضافة تأخير بسيط ليشعر المستخدم بعملية التحديث
+            await Future.delayed(const Duration(milliseconds: 800));
+            if (mounted) setState(() {}); 
+          },
+          color: theme.primaryColor,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
             SliverAppBar(
               expandedHeight: 0,
               pinned: true,
@@ -195,10 +234,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               ),
             ),
           ],
-        );
-      }
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildNotificationBadge(AppProvider appProvider, ThemeData theme) {
     return StreamBuilder<List<Map<String, dynamic>>>(
@@ -434,7 +474,24 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         items: [
           BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: appProvider.translate('home')),
           BottomNavigationBarItem(icon: const Icon(Icons.analytics_rounded), label: appProvider.translate('views')),
-          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_rounded), label: appProvider.translate('messages')),
+          BottomNavigationBarItem(
+            icon: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: ChatService().getMyChats(),
+              builder: (context, snapshot) {
+                final chats = snapshot.data ?? [];
+                int totalUnread = 0;
+                for (var chat in chats) {
+                  totalUnread += (chat['unread_count'] as int? ?? 0);
+                }
+                return Badge(
+                  label: Text(totalUnread.toString()),
+                  isLabelVisible: totalUnread > 0,
+                  child: const Icon(Icons.chat_bubble_rounded),
+                );
+              },
+            ),
+            label: appProvider.translate('messages'),
+          ),
           BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: appProvider.translate('profile')),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/app_provider.dart';
 import '../../models/property_model.dart';
 import '../../widgets/property/property_card.dart';
@@ -15,31 +16,9 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   final PropertyService _propertyService = PropertyService();
-  List<dynamic> _favorites = [];
-  bool _isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadFavorites();
-  }
-
-  Future<void> _loadFavorites() async {
-    try {
-      final data = await _propertyService.getFavorites();
-      if (mounted) {
-        setState(() {
-          // فلترة العقارات المتاحة فقط
-          _favorites = data.where((f) => 
-            f['properties'] != null && f['properties']['is_available'] == true
-          ).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading favorites: $e');
-      if (mounted) setState(() => _isLoading = false);
-    }
+  Future<void> _refresh() async {
+    setState(() {});
   }
 
   @override
@@ -47,33 +26,60 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final appProvider = Provider.of<AppProvider>(context);
     final theme = Theme.of(context);
     final isAr = appProvider.isArabic;
-
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final userId = Supabase.instance.client.auth.currentUser?.id;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          isAr ? 'المفضلة' : 'Favorites',
+          appProvider.translate('saved') ?? (isAr ? 'المفضلة' : 'Saved'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      body: _favorites.isEmpty
-          ? _buildEmptyState(appProvider, theme)
-          : RefreshIndicator(
-              onRefresh: _loadFavorites,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: _favorites.length,
-                itemBuilder: (context, index) {
-                  final favorite = _favorites[index];
-                  final propertyData = favorite['properties'];
-                  final property = Property.fromJson(propertyData);
-                  return PropertyCard(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: Supabase.instance.client
+              .from('favorites')
+              .stream(primaryKey: ['id'])
+              .eq('user_id', userId ?? '')
+              .asyncMap((event) async {
+                return await _propertyService.getFavorites();
+              }),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final favorites = snapshot.data ?? [];
+
+            if (favorites.isEmpty) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: _buildEmptyState(appProvider, theme),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              itemCount: favorites.length,
+              itemBuilder: (context, index) {
+                final favorite = favorites[index];
+                final propertyData = favorite['properties'];
+                if (propertyData == null) return const SizedBox();
+                
+                final property = Property.fromJson(propertyData);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: PropertyCard(
+                    key: ValueKey('fav_${property.id}'),
                     property: property,
                     onTap: () {
                       Navigator.push(
@@ -81,12 +87,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         MaterialPageRoute(
                           builder: (context) => PropertyDetailsScreen(property: property),
                         ),
-                      ).then((_) => _loadFavorites());
+                      ).then((_) => setState(() {}));
                     },
-                  );
-                },
-              ),
-            ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -95,141 +104,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.favorite_border_rounded,
-            size: 80,
-            color: theme.primaryColor.withOpacity(0.2),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.favorite_border_rounded, size: 60, color: theme.primaryColor),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
-            appProvider.isArabic ? 'لا توجد مفضلات' : 'No Favorites Yet',
-            style: theme.textTheme.titleLarge?.copyWith(color: theme.textTheme.bodySmall?.color),
+            appProvider.translate('no_favorites') ?? (appProvider.isArabic ? 'لا توجد مفضلات' : 'No Favorites Yet'),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text(
-            appProvider.isArabic ? 'استكشف العقارات واضغط على أيقونة القلب!' : 'Explore properties and tap the heart icon!',
-            style: theme.textTheme.bodySmall,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              appProvider.translate('explore_and_save') ?? (appProvider.isArabic ? 'استكشف العقارات واضغط على القلب لحفظها هنا' : 'Explore properties and tap the heart to save them here'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFavoriteCard(
-    BuildContext context,
-    Map<String, dynamic> property,
-    ThemeData theme,
-    AppProvider appProvider,
-  ) {
-    final images = property['images'] as List<dynamic>? ?? [];
-    final imageUrl = images.isNotEmpty ? images[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500';
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PropertyDetailsScreen(property: Property.fromJson(property)),
-          ),
-        ).then((_) => _loadFavorites()); // Refresh after coming back
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  child: Image.network(
-                    imageUrl,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: appProvider.isArabic ? null : 12,
-                  left: appProvider.isArabic ? 12 : null,
-                  child: GestureDetector(
-                    onTap: () async {
-                      await _propertyService.toggleFavorite(property['id'].toString());
-                      _loadFavorites();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.favorite, color: Colors.redAccent, size: 20),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${property['price']} ${appProvider.translate('currency')}',
-                        style: TextStyle(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-                          const SizedBox(width: 4),
-                          Text(
-                            "4.8", // Static for now
-                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    property['title'] ?? '',
-                    style: theme.textTheme.titleLarge?.copyWith(fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_rounded, color: theme.primaryColor.withOpacity(0.6), size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        property['location'] ?? '',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

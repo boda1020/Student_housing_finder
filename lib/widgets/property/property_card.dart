@@ -41,7 +41,6 @@ class PropertyCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Image Section
             Expanded(
               flex: 3,
               child: Stack(
@@ -59,7 +58,6 @@ class PropertyCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Availability Badge - Top Start (Left in EN, Right in AR)
                   PositionedDirectional(
                     top: 12,
                     start: 12,
@@ -76,7 +74,6 @@ class PropertyCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Action/Favorite Buttons - Top End (Right in EN, Left in AR)
                   PositionedDirectional(
                     top: 12,
                     end: 12,
@@ -85,7 +82,6 @@ class PropertyCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Info Section
             Expanded(
               flex: 2,
               child: Padding(
@@ -141,10 +137,15 @@ class PropertyCard extends StatelessWidget {
                         _buildFeatureIcon(Icons.bed_rounded, "${property.rooms} ${appProvider.translate('rooms')}", textColor),
                         const SizedBox(width: 16),
                         _buildFeatureIcon(Icons.king_bed_rounded, "${property.bedsCount} ${appProvider.translate('beds')}", textColor),
-                        if (property.isFurnished) ...[
-                          const SizedBox(width: 16),
-                          _buildFeatureIcon(Icons.chair_rounded, appProvider.translate('furnished'), textColor),
-                        ],
+                        const SizedBox(width: 16),
+                        // عرض عدد المشاهدات الحقيقي
+                        Row(
+                          children: [
+                            Icon(Icons.visibility_outlined, size: 14, color: textColor.withValues(alpha: 0.5)),
+                            const SizedBox(width: 4),
+                            Text("${property.views}", style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
                       ],
                     ),
                   ],
@@ -179,6 +180,7 @@ class _FavoriteButton extends StatefulWidget {
 class _FavoriteButtonState extends State<_FavoriteButton> {
   final _propertyService = PropertyService();
   bool _isFavorite = false;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -194,16 +196,27 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () async {
-        final newStatus = await _propertyService.toggleFavorite(widget.propertyId);
-        setState(() => _isFavorite = newStatus);
+      onTap: _isProcessing ? null : () async {
+        setState(() {
+          _isFavorite = !_isFavorite;
+          _isProcessing = true;
+        });
+
+        try {
+          final newStatus = await _propertyService.toggleFavorite(widget.propertyId);
+          if (mounted && _isFavorite != newStatus) {
+            setState(() => _isFavorite = newStatus);
+          }
+        } finally {
+          if (mounted) setState(() => _isProcessing = false);
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
         ),
         child: Icon(
           _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,

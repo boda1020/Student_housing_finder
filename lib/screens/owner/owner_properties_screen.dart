@@ -210,10 +210,28 @@ class _OwnerPropertiesScreenState extends State<OwnerPropertiesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(property['location'] ?? 'Location', style: const TextStyle(color: Colors.grey)),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(property['location'] ?? 'Location', style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    // إضافة عدد المشاهدات للمالك
+                    Row(
+                      children: [
+                        const Icon(Icons.visibility_rounded, size: 16, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${property['views'] ?? 0}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blue),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

@@ -8,10 +8,10 @@ import '../notifications/notifications_screen.dart';
 import '../favorites/favorites_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../profile/profile_screen.dart';
-import '../../data/services/auth_service.dart';
 import '../../models/property_model.dart';
 import '../auth/login_screen.dart';
 import 'filter_screen.dart';
+import '../../data/services/chat_service.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({super.key});
@@ -26,8 +26,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   bool _isLoading = true;
   int _selectedCategoryIndex = 0;
   int _currentNavIndex = 0;
-  
-  Map<String, dynamic> _activeFilters = {};
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -37,20 +35,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     _fetchProperties();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   Future<void> _fetchProperties() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-
     try {
-      // جلب العقارات المتاحة فقط للطلاب
       var query = supabase.from('properties').select('*, profiles(full_name, phone, avatar_url)').eq('is_available', true);
-
+      
       if (_searchQuery.isNotEmpty) {
         query = query.or('title.ilike.%$_searchQuery%,location.ilike.%$_searchQuery%');
       }
@@ -61,46 +51,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       else if (_selectedCategoryIndex == 3) filterType = 'shared';
       else if (_selectedCategoryIndex == 4) filterType = 'villa';
 
-      if (filterType != null) {
-        query = query.eq('property_type', filterType);
-      } else if (_activeFilters['type'] != null && _activeFilters['type'] != 'All') {
-        query = query.eq('property_type', _activeFilters['type'].toString().toLowerCase());
-      }
-
-      if (_activeFilters['minPrice'] != null) query = query.gte('price', _activeFilters['minPrice']);
-      if (_activeFilters['maxPrice'] != null) query = query.lte('price', _activeFilters['maxPrice']);
-
-      // Furnishing filter
-      if (_activeFilters['furnishing'] != null && _activeFilters['furnishing'] != 'All') {
-        query = query.eq('is_furnished', _activeFilters['furnishing'] == 'Furnished');
-      }
-
-      // Rooms filter
-      if (_activeFilters['rooms'] != null && _activeFilters['rooms'] > 0) {
-        query = query.eq('rooms', _activeFilters['rooms']);
-      }
-
-      // Amenities filter
-      if (_activeFilters['amenities'] != null) {
-        final Map<String, bool> amenities = Map<String, bool>.from(_activeFilters['amenities']);
-        
-        // Handle boolean columns separately
-        if (amenities['Reception'] == true) query = query.eq('has_reception', true);
-        if (amenities['Salon'] == true) query = query.eq('has_salon', true);
-
-        // Filter out boolean columns from the array search
-        final List<String> selectedAmenities = amenities.entries
-            .where((e) => e.value && e.key != 'Reception' && e.key != 'Salon')
-            .map((e) => e.key)
-            .toList();
-        
-        if (selectedAmenities.isNotEmpty) {
-          query = query.contains('amenities', selectedAmenities);
-        }
-      }
+      if (filterType != null) query = query.eq('property_type', filterType);
 
       final data = await query.order('created_at', ascending: false);
-      
       if (mounted) {
         setState(() {
           _properties = (data as List).map((json) => Property.fromJson(json)).toList();
@@ -115,12 +68,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
-    final isDark = appProvider.isDarkMode;
     final isArabic = appProvider.isArabic;
-    final theme = Theme.of(context);
 
     final List<Widget> screens = [
-      _buildExploreBody(appProvider, theme),
+      _buildExploreBody(appProvider),
       const FavoritesScreen(),
       const ChatListScreen(),
       const ProfileScreen(),
@@ -129,224 +80,317 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        appBar: _currentNavIndex == 0 ? AppBar(
-          centerTitle: true,
-          leading: Builder(
-            builder: (context) => IconButton(
-              icon: Icon(Icons.menu_rounded, size: 28, color: isDark ? Colors.white : theme.primaryColor),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-          ),
-          title: Text(appProvider.translate('app_title'), style: TextStyle(color: isDark ? Colors.white : theme.primaryColor, fontWeight: FontWeight.bold)),
-          actions: [
-            _buildNotificationBadge(isDark, theme.primaryColor),
-            const SizedBox(width: 8),
-          ],
-        ) : null,
-        drawer: _currentNavIndex == 0 ? _buildDrawer(appProvider, theme) : null,
+        drawer: _buildDrawer(appProvider),
         body: IndexedStack(index: _currentNavIndex, children: screens),
-        bottomNavigationBar: _buildBottomNav(appProvider, theme),
+        bottomNavigationBar: _buildBottomNav(appProvider),
       ),
     );
   }
 
-  Widget _buildNotificationBadge(bool isDark, Color primaryColor) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: supabase.from('notifications').stream(primaryKey: ['id']).eq('user_id', supabase.auth.currentUser?.id ?? ''),
-      builder: (context, snapshot) {
-        final unreadCount = (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              icon: Icon(Icons.notifications_none_rounded, size: 28, color: isDark ? Colors.white : primaryColor),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+  Widget _buildExploreBody(AppProvider appProvider) {
+    final theme = Theme.of(context);
+    return RefreshIndicator(
+      onRefresh: _fetchProperties,
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: true,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, size: 28),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
-            if (unreadCount > 0)
-              Positioned(
-                right: 8, top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            title: Text(appProvider.translate('app_title') ?? "Housing Finder", 
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+            centerTitle: true,
+            actions: [
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: supabase
+                    .from('notifications')
+                    .stream(primaryKey: ['id'])
+                    .eq('user_id', supabase.auth.currentUser?.id ?? ''),
+                builder: (context, snapshot) {
+                  final unreadCount = (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                        ),
+                        icon: const Icon(Icons.notifications_none_rounded),
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  _buildSearchRow(appProvider),
+                  const SizedBox(height: 24),
+                  _buildCategoryChips(appProvider),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          if (_isLoading)
+            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => PropertyCard(
+                    property: _properties[index],
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PropertyDetailsScreen(property: _properties[index]))),
+                  ),
+                  childCount: _properties.length,
                 ),
               ),
-          ],
-        );
-      },
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildExploreBody(AppProvider appProvider, ThemeData theme) {
-    return Column(
+  Widget _buildSearchRow(AppProvider appProvider) {
+    final theme = Theme.of(context);
+    final isDark = appProvider.isDarkMode;
+    
+    return Row(
       children: [
-        const SizedBox(height: 10),
-        _buildSearchRow(appProvider, theme),
-        const SizedBox(height: 20),
-        _buildCategoryChips(appProvider, theme),
-        const SizedBox(height: 20),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _fetchProperties,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                _buildPromoBanner(appProvider, theme),
-                const SizedBox(height: 25),
-                Text(appProvider.translate('properties_available'), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                if (_isLoading) const Center(child: Padding(padding: EdgeInsets.only(top: 50.0), child: CircularProgressIndicator()))
-                else if (_properties.isEmpty) _buildEmptyState(appProvider, theme)
-                else ..._properties.map((property) => PropertyCard(
-                  property: property,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PropertyDetailsScreen(property: property))),
-                )).toList(),
-                const SizedBox(height: 20),
-              ],
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E2530) : Colors.grey[100],
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                color: theme.primaryColor.withOpacity(0.5),
+                width: 1.5,
+              ),
             ),
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: (val) { 
+                setState(() => _searchQuery = val); 
+                _fetchProperties(); 
+              },
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              decoration: InputDecoration(
+                hintText: appProvider.translate('search_placeholder') ?? 'Search...',
+                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey, fontSize: 14),
+                prefixIcon: Icon(Icons.search_rounded, color: theme.primaryColor, size: 24),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          height: 50,
+          width: 50,
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: theme.primaryColor.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: IconButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FilterScreen())),
+            icon: const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSearchRow(AppProvider appProvider, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) { setState(() => _searchQuery = value); _fetchProperties(); },
-              decoration: InputDecoration(
-                hintText: appProvider.translate('search_campus'),
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _fetchProperties(); }) : null,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: () async {
-              final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => FilterScreen(initialFilters: _activeFilters)));
-              if (result != null) { setState(() => _activeFilters = result); _fetchProperties(); }
-            },
-            child: Container(
-              height: 56, width: 56,
-              decoration: BoxDecoration(color: theme.primaryColor, borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.tune_rounded, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChips(AppProvider appProvider, ThemeData theme) {
+  Widget _buildCategoryChips(AppProvider appProvider) {
+    final theme = Theme.of(context);
+    final categories = ['all_housing', 'apartments', 'studio', 'shared', 'villas'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        children: [
-          _categoryChip(0, appProvider.translate('all_housing'), theme),
-          _categoryChip(1, appProvider.translate('apartments'), theme),
-          _categoryChip(2, appProvider.translate('studio'), theme),
-          _categoryChip(3, appProvider.translate('shared'), theme),
-          _categoryChip(4, appProvider.translate('villas'), theme),
-        ],
+        children: List.generate(categories.length, (index) {
+          final selected = _selectedCategoryIndex == index;
+          return GestureDetector(
+            onTap: () { setState(() => _selectedCategoryIndex = index); _fetchProperties(); },
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF5C61F2) : theme.cardTheme.color,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                appProvider.translate(categories[index]) ?? categories[index],
+                style: TextStyle(color: selected ? Colors.white : Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
 
-  Widget _categoryChip(int index, String label, ThemeData theme) {
-    final selected = _selectedCategoryIndex == index;
-    return GestureDetector(
-      onTap: () { setState(() => _selectedCategoryIndex = index); _fetchProperties(); },
-      child: Container(
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? theme.primaryColor : theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: selected ? theme.primaryColor : theme.dividerColor.withOpacity(0.1)),
+  Widget _buildBottomNav(AppProvider appProvider) {
+    return BottomNavigationBar(
+      currentIndex: _currentNavIndex,
+      onTap: (i) => setState(() => _currentNavIndex = i),
+      selectedItemColor: const Color(0xFF5C61F2),
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      items: [
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.explore_rounded), 
+          label: appProvider.translate('explore')
         ),
-        child: Text(label, style: TextStyle(color: selected ? Colors.white : theme.textTheme.bodyMedium?.color?.withOpacity(0.7), fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  Widget _buildPromoBanner(AppProvider appProvider, ThemeData theme) {
-    return Container(
-      width: double.infinity, padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)]), borderRadius: BorderRadius.circular(24)),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${appProvider.translate('new_listings')}\n${appProvider.translate('near_mit')}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 12),
-              Text(appProvider.translate('promo_text'), style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
-            ],
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.favorite_rounded), 
+          label: appProvider.translate('saved')
+        ),
+        BottomNavigationBarItem(
+          icon: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: ChatService().getMyChats(),
+            builder: (context, snapshot) {
+              final chats = snapshot.data ?? [];
+              int totalUnread = 0;
+              for (var chat in chats) {
+                totalUnread += (chat['unread_count'] as int? ?? 0);
+              }
+              return Badge(
+                label: Text(totalUnread.toString()),
+                isLabelVisible: totalUnread > 0,
+                child: const Icon(Icons.chat_bubble_rounded),
+              );
+            },
           ),
-          PositionedDirectional(end: -10, bottom: -10, child: Icon(Icons.school_rounded, size: 90, color: Colors.white.withOpacity(0.2))),
-        ],
-      ),
+          label: appProvider.translate('messages'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.person_rounded), 
+          label: appProvider.translate('profile')
+        ),
+      ],
     );
   }
 
-  Widget _buildDrawer(AppProvider appProvider, ThemeData theme) {
+  Widget _buildDrawer(AppProvider appProvider) {
     final user = supabase.auth.currentUser;
     return Drawer(
+      backgroundColor: const Color(0xFF1A1C20),
       child: Column(
         children: [
+          // Header matching screenshot: Blue background with Profile Info
           StreamBuilder<Map<String, dynamic>>(
             stream: supabase.from('profiles').stream(primaryKey: ['id']).eq('id', user?.id ?? '').map((l) => l.isNotEmpty ? l.first : {}),
             builder: (context, snapshot) {
-              final name = snapshot.data?['full_name'] ?? appProvider.translate('user');
+              final name = snapshot.data?['full_name'] ?? "User";
               final avatarUrl = snapshot.data?['avatar_url'];
-              return DrawerHeader(
-                decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)])),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 35, 
-                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null, 
-                        child: (avatarUrl == null || avatarUrl.isEmpty) 
-                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)) 
-                          : null
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 60, bottom: 30),
+                color: const Color(0xFF5C61F2),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.white24,
+                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                      child: (avatarUrl == null || avatarUrl.isEmpty)
+                          ? const Icon(Icons.person, size: 45, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(height: 15),
+                    const Text(
+                      "BODA",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 12),
-                      Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
-            }
+            },
           ),
+          const SizedBox(height: 10),
+          // Language Toggle
           ListTile(
-            leading: Icon(appProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: theme.primaryColor),
-            title: Text(appProvider.isDarkMode ? appProvider.translate('light_mode') : appProvider.translate('dark_mode')),
-            trailing: Switch(value: appProvider.isDarkMode, onChanged: (value) => appProvider.toggleTheme(), activeColor: theme.primaryColor),
+            leading: const Icon(Icons.translate, color: Color(0xFF5C61F2)),
+            title: Text(
+              appProvider.isArabic ? "English" : "العربية",
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            onTap: () => appProvider.toggleLanguage(),
           ),
+          // Dark Mode Toggle
           ListTile(
-            leading: Icon(Icons.translate, color: theme.primaryColor), 
-            title: Text(appProvider.isArabic ? 'English' : 'العربية'), 
-            onTap: () => appProvider.toggleLanguage()
+            leading: Icon(
+              appProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: const Color(0xFF5C61F2),
+            ),
+            title: Text(
+              appProvider.isArabic
+                  ? (appProvider.isDarkMode ? "الوضع الفاتح" : "الوضع الداكن")
+                  : (appProvider.isDarkMode ? "Light Mode" : "Dark Mode"),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            trailing: Switch(
+              value: appProvider.isDarkMode,
+              onChanged: (val) => appProvider.toggleTheme(),
+              activeColor: const Color(0xFF5C61F2),
+            ),
           ),
           const Spacer(),
+          const Divider(color: Colors.white10),
+          // Logout at the bottom as seen in screenshot
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             title: Text(
-              appProvider.translate('logout'),
-              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              appProvider.translate('logout') ?? "Logout",
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
             ),
             onTap: () async {
-              await AuthService().signOut();
+              await supabase.auth.signOut();
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -357,55 +401,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
           const SizedBox(height: 20),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(AppProvider appProvider, ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1D23) : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentNavIndex,
-        onTap: (i) => setState(() => _currentNavIndex = i),
-        selectedItemColor: theme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.explore_rounded), label: appProvider.translate('explore')),
-          BottomNavigationBarItem(icon: const Icon(Icons.favorite_rounded), label: appProvider.translate('saved')),
-          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_rounded), label: appProvider.translate('messages')),
-          BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: appProvider.translate('profile')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(AppProvider appProvider, ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 50.0),
-        child: Column(
-          children: [
-            Icon(Icons.search_off_rounded, size: 60, color: Colors.grey.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            Text(
-              appProvider.translate('no_properties_found'),
-              style: TextStyle(color: Colors.grey.withValues(alpha: 0.8), fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
       ),
     );
   }

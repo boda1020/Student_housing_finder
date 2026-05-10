@@ -26,6 +26,15 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _loadChatDetails();
+    _markMessagesAsRead();
+  }
+
+  Future<void> _markMessagesAsRead() async {
+    try {
+      await _chatService.markAsRead(widget.chatId);
+    } catch (e) {
+      debugPrint('Error marking messages as read: $e');
+    }
   }
 
   Future<void> _loadChatDetails() async {
@@ -148,6 +157,12 @@ class _ChatScreenState extends State<ChatScreen> {
         
         final messages = snapshot.data ?? [];
         
+        // Mark as read logic: If there are unread messages from the partner, mark them as read
+        final hasUnread = messages.any((m) => m['sender_id'] != _currentUserId && m['is_read'] == false);
+        if (hasUnread) {
+          _markMessagesAsRead();
+        }
+        
         // Use a slight delay to ensure the list is rendered before scrolling
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) _scrollToBottom();
@@ -169,6 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
           itemBuilder: (context, index) {
             final msg = messages[index];
             final isMe = msg['sender_id'] == _currentUserId;
+            final isRead = msg['is_read'] ?? false;
             final timestamp = DateTime.parse(msg['created_at']);
 
             final showDate = index == 0 ||
@@ -177,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
             return Column(
               children: [
                 if (showDate) _DateSeparator(date: timestamp, appProvider: appProvider),
-                _buildBubble(msg['content'], isMe, timestamp, theme),
+                _buildBubble(msg['content'], isMe, timestamp, isRead, theme),
               ],
             );
           },
@@ -186,7 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildBubble(String text, bool isMe, DateTime timestamp, ThemeData theme) {
+  Widget _buildBubble(String text, bool isMe, DateTime timestamp, bool isRead, ThemeData theme) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -220,12 +236,25 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              _formatTime(timestamp),
-              style: TextStyle(
-                color: isMe ? Colors.white70 : theme.textTheme.bodySmall?.color,
-                fontSize: 10,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatTime(timestamp),
+                  style: TextStyle(
+                    color: isMe ? Colors.white70 : theme.textTheme.bodySmall?.color,
+                    fontSize: 10,
+                  ),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                    size: 14,
+                    color: isRead ? Colors.cyanAccent : Colors.white70,
+                  ),
+                ],
+              ],
             ),
           ],
         ),

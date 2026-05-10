@@ -14,7 +14,6 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final _notificationService = NotificationService();
-  final _supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -50,42 +49,58 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: Directionality(
         textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-        child: StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _notificationService.getNotifications(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final notifications = snapshot.data ?? [];
-            if (notifications.isEmpty) return _buildEmptyState(theme, appProvider);
-
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = notifications[index];
-                return Dismissible(
-                  key: Key(item['id'].toString()),
-                  direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
-                  background: Container(
-                    alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.delete_outline, color: Colors.white),
-                  ),
-                  onDismissed: (direction) {
-                    _notificationService.deleteNotification(item['id'].toString());
-                  },
-                  child: _buildNotificationCard(item, theme, appProvider, isDark),
-                );
-              },
-            );
+        child: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
           },
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _notificationService.getNotifications(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // Show all notifications (both read and unread)
+              final notifications = snapshot.data ?? [];
+
+              if (notifications.isEmpty) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                    _buildEmptyState(theme, appProvider),
+                  ],
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: notifications.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final item = notifications[index];
+                  return Dismissible(
+                    key: Key(item['id'].toString()),
+                    direction: isAr ? DismissDirection.startToEnd : DismissDirection.endToStart,
+                    background: Container(
+                      alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                    ),
+                    onDismissed: (direction) {
+                      _notificationService.deleteNotification(item['id'].toString());
+                    },
+                    child: _buildNotificationCard(item, theme, appProvider, isDark),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -121,7 +136,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildNotificationCard(Map<String, dynamic> data, ThemeData theme, AppProvider appProvider, bool isDark) {
     final bool isRead = data['is_read'] ?? false;
     final String rawTitle = data['title'] ?? '';
-    // If the title is a translation key, translate it, otherwise show as is
     final String displayTitle = appProvider.translate(rawTitle);
 
     return Container(
@@ -135,14 +149,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? theme.dividerColor.withOpacity(0.05) 
               : theme.primaryColor.withOpacity(0.2)
         ),
-        boxShadow: [
-          if (!isRead) 
-            BoxShadow(
-              color: theme.primaryColor.withOpacity(0.05), 
-              blurRadius: 10, 
-              offset: const Offset(0, 4)
-            )
-        ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -164,7 +170,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             fontWeight: isRead ? FontWeight.w500 : FontWeight.bold, 
             fontSize: 15,
             color: isDark ? Colors.white : Colors.black87,
-          )
+          ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -175,10 +181,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               fontSize: 13
             )
           ),
-        ),
-        trailing: IconButton(
-          icon: Icon(Icons.delete_outline_rounded, color: Colors.grey.withOpacity(0.5), size: 20),
-          onPressed: () => _notificationService.deleteNotification(data['id'].toString()),
         ),
         onTap: () async {
           await _notificationService.markAsRead(data['id'].toString());

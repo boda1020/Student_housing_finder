@@ -54,8 +54,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.contains('user_already_exists')) {
+          errorMessage = appProvider.translate('user_exists_error');
+        } else {
+          errorMessage = '${appProvider.translate('error')}: $errorMessage';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -72,6 +82,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(isAr ? Icons.arrow_forward_ios : Icons.arrow_back_ios, color: theme.primaryColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => appProvider.toggleLanguage(),
+              child: Text(
+                isAr ? 'English' : 'العربية',
+                style: TextStyle(
+                  color: theme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ),
         body: _isLoading 
           ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
           : Container(
@@ -88,17 +120,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Back Button
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(isAr ? Icons.arrow_forward_ios : Icons.arrow_back_ios, color: theme.primaryColor),
-                    ),
-                    const SizedBox(height: 20),
-                    
                     // Welcome Text
                     Text(
                       appProvider.translate('signup'),

@@ -33,7 +33,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     _isActualOwner = user?.id == widget.property.ownerId;
 
-    if (user != null && !_isActualOwner) {
+    // زيادة المشاهدات لكل الزوار (حتى الأونر للتجربة)
+    if (user != null) {
       _propertyService.incrementViews(widget.property.id);
     }
   }
@@ -45,6 +46,21 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   }
 
   void _startChat() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(Provider.of<AppProvider>(context, listen: false).translate('please_login_first') ?? 'Please login first')),
+      );
+      return;
+    }
+
+    if (user.id == widget.property.ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(Provider.of<AppProvider>(context, listen: false).translate('cannot_message_self') ?? 'You cannot message yourself')),
+      );
+      return;
+    }
+
     try {
       final chatId = await _chatService.getOrCreateChat(
         ownerId: widget.property.ownerId,
@@ -53,7 +69,13 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
       if (mounted) {
         Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chatId)));
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -221,6 +243,10 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             Icon(Icons.location_on_rounded, color: primaryColor, size: 16),
             const SizedBox(width: 4),
             Text(widget.property.location, style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13)),
+            const SizedBox(width: 12),
+            Icon(Icons.visibility_rounded, color: Colors.blue.withOpacity(0.7), size: 16),
+            const SizedBox(width: 4),
+            Text("${widget.property.views}", style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

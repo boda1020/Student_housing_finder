@@ -17,18 +17,26 @@ class AuthService {
       password: password,
       data: {
         'full_name': fullName,
+        'phone': phone,
         'role': role,
+        'university': university,
       },
     );
 
+    // If there's NO trigger in Supabase, we manually create the profile
+    // If there IS a trigger, this upsert will just update/ensure data is correct
     if (response.user != null) {
-      await _supabase.from('profiles').upsert({
-        'id': response.user!.id,
-        'full_name': fullName,
-        'phone': phone,
-        'university': university,
-        'role': role,
-      });
+      try {
+        await _supabase.from('profiles').upsert({
+          'id': response.user!.id,
+          'full_name': fullName,
+          'phone': phone,
+          'university': university,
+          'role': role,
+        });
+      } catch (e) {
+        print('Profile sync handled by trigger or failed: $e');
+      }
     }
     return response;
   }
@@ -44,6 +52,14 @@ class AuthService {
   }
 
   User? get currentUser => _supabase.auth.currentUser;
+
+  // Send password reset email
+  Future<void> resetPassword(String email) async {
+    await _supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.flutterhousing://reset-callback',
+    );
+  }
   
   Future<bool> isOwner() async {
     final userId = currentUser?.id;

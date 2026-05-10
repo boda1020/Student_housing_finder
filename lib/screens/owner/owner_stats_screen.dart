@@ -54,14 +54,47 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
-                _buildStatCard(
-                  appProvider.translate('total_views_stat'),
-                  '$totalViews',
-                  Icons.visibility_rounded,
-                  Colors.orange,
-                  appProvider.translate('last_30_days'),
+                // Header Card with Gradient
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF5C61F2), Color(0xFF8E92FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF5C61F2).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 10),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.analytics_outlined, color: Colors.white, size: 40),
+                      const SizedBox(height: 15),
+                      Text(
+                        appProvider.translate('total_performance') ?? "Overall Performance",
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '$totalViews',
+                        style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        appProvider.translate('total_views_stat') ?? "Total Views",
+                        style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 25),
+                // Stats Grid
                 Row(
                   children: [
                     Expanded(
@@ -77,13 +110,22 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
                     Expanded(
                       child: _buildStatCard(
                         appProvider.translate('avg_price'),
-                        '${avgPrice.toStringAsFixed(0)} ${appProvider.translate('currency')}',
+                        '${avgPrice.toStringAsFixed(0)}',
                         Icons.payments_rounded,
                         Colors.purple,
-                        null,
+                        appProvider.translate('currency'),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                // Additional Stats Card
+                _buildStatCard(
+                  appProvider.translate('status_report') ?? "System Status",
+                  appProvider.translate('active_now') ?? "Operational",
+                  Icons.check_circle_outline_rounded,
+                  Colors.green,
+                  "Real-time enabled",
                 ),
               ],
             ),
@@ -130,13 +172,17 @@ class _OwnerStatsScreenState extends State<OwnerStatsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          Text(
-            value, 
-            style: TextStyle(
-              fontSize: 28, 
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            )
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 22, // تصغير الحجم الأساسي ليتناسب مع المساحة
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500)),
